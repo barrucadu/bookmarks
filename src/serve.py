@@ -26,6 +26,8 @@ PAGE_SIZE = 50
 
 BASE_URI = os.getenv("BASE_URI", "http://bookmarks.nyarlathotep")
 
+ALLOW_WRITES = os.getenv("ALLOW_WRITES", "0") == "1"
+
 app = Flask(__name__)
 app.jinja_env.filters["quote_plus"] = lambda u: quote_plus(u)
 
@@ -162,7 +164,9 @@ def search(**kwargs):
 
     if accepts_html(request):
         results = do_search(request.args, highlight=True)
-        return render_template("search.html", base_uri=BASE_URI, **results)
+        return render_template(
+            "search.html", allow_writes=ALLOW_WRITES, base_uri=BASE_URI, **results
+        )
     else:
         results = do_search(request.args)
         return jsonify(results)
@@ -171,6 +175,9 @@ def search(**kwargs):
 @app.route("/add")
 @app.route("/add.<fmt>")
 def add_bookmark(**kwargs):
+    if not ALLOW_WRITES:
+        abort(403)
+
     if not accepts_html(request):
         abort(406)
 
@@ -187,6 +194,9 @@ def bookmark_controller(**kwargs):
         abort(400)
 
     if request.method in ["POST", "PUT"]:
+        if not ALLOW_WRITES:
+            abort(403)
+
         if not accepts_html(request) and not accepts_json(request):
             abort(406)
 
@@ -227,6 +237,9 @@ def bookmark_controller(**kwargs):
         else:
             return jsonify(result), code
     elif request.method == "DELETE":
+        if not ALLOW_WRITES:
+            abort(403)
+
         try:
             es.delete(index=ES_INDEX, id=url)
         except NotFoundError:
