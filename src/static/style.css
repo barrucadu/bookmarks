@@ -1,0 +1,113 @@
+@font-face {
+  font-family: 'Gentium Book Basic';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Gentium Book Basic'), local('GentiumBookBasic'), url('fonts/gentium-book-basic.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215;
+}
+
+@font-face {
+  font-family: 'Fira Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Fira Mono Regular'), local('FiraMono-Regular'), url(fonts/fira-mono.woff2);
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+body {
+    padding: 0;
+    margin: 0;
+    background-color: #fafafa;
+    color: #000000;
+    font-size: 18px;
+    font-family: 'Gentium Book Basic', Cambria, Georgia, Times, serif;
+}
+
+main {
+    width: 1000px;
+    margin: 0 auto;
+    font-size: 18px;
+    padding: 30px 60px;
+    background-color: #ffffff;
+    border: 1px solid #dddddd;
+    border-top: none;
+}
+
+a, a:link, a:visited {
+    color: #ca2017;
+    text-decoration: none;
+}
+
+a:active, a:hover {
+    text-decoration: underline;
+}
+
+.search-form {
+}
+
+.search-form__input {
+    background: #fff url("/static/search.svg") no-repeat -5px -3px;
+    padding-left: 30px;
+    font-size: 18px;
+    height: 32px;
+    border: 2px solid #4f535b;
+    width: 100%;
+}
+
+.result-count {
+}
+
+.results {
+    border-top: 1px solid #999999;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.results__result {
+    margin: 1em 0;
+    padding: 0;
+}
+
+.results__result__title {
+    font-size: 1.2em;
+    margin: 0;
+    padding: 0;
+}
+
+.results__result__url {
+    font-family: 'Fira Mono', monospace;
+    font-size: 0.9em;
+    margin: 8px 0;
+    padding: 0;
+}
+
+.results__result__tags {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.results__result__tags__tag {
+    display: inline-block;
+    background-color: #00a55e;
+    color: #ffffff;
+    padding: 3px 6px;
+}
+
+.pagination {
+    border-top: 1px solid #999999;
+    margin: 0;
+    padding: 1em 0;
+}
+
+.pagination__link {
+    font-size: 1.2em;
+    margin: 0;
+    padding: 0;
+}
+
+.pagination__info {
+    margin: 8px 0;
+    padding: 0;
+}

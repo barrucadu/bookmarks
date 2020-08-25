@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="author" content="Michael Walker">
+    <meta name="robots" content="NONE">
+
+    <base href="{{ base_uri|e }}">
+
+    <title>{% block title %}Bookmarks{% endblock %}</title>
+
+    <link rel="stylesheet" href="static/style.css" type="text/css">
+  </head>
+
+  <body>
+    <main>
+      {% block body %}
+      {% endblock %}
+    </main>
+  </body>
+</html>

@@ -8,11 +8,15 @@ from flask import (
     abort,
     jsonify,
     redirect,
+    render_template,
     request,
+    send_from_directory,
 )
 from html2text import HTML2Text
+from urllib.parse import quote_plus
 from werkzeug.exceptions import HTTPException
 
+import math
 import os
 import requests
 
@@ -23,6 +27,8 @@ PAGE_SIZE = 50
 BASE_URI = os.getenv("BASE_URI", "http://bookmarks.nyarlathotep")
 
 app = Flask(__name__)
+app.jinja_env.filters["quote_plus"] = lambda u: quote_plus(u)
+
 es = Elasticsearch([os.getenv("ES_HOST", "http://localhost:9200")])
 
 
@@ -34,7 +40,7 @@ def do_search(request_args):
         query = {"match_all": {}}
 
     try:
-        page = int(request_args.get("page"))
+        page = int(request_args.get("page")) - 1
     except Exception:
         page = 0
 
@@ -48,13 +54,15 @@ def do_search(request_args):
         },
     )
 
+    count = results["hits"]["total"]["value"]
     return {
         "tags": {
             d["key"]: d["doc_count"] for d in results["aggregations"]["tags"]["buckets"]
         },
         "results": [hit["_source"] for hit in results["hits"]["hits"]],
-        "count": results["hits"]["total"]["value"],
-        "page": page,
+        "count": count,
+        "page": page + 1,
+        "pages": math.ceil(count / PAGE_SIZE),
         "q": q,
     }
 
@@ -64,22 +72,27 @@ def do_search(request_args):
 
 
 def accepts_html(request):
-    return (
-        (request.view_args or {}).get("fmt") in [None, "html"]
-        and request.accept_mimetypes.accept_html
-    )
+    return (request.view_args or {}).get("fmt") in [
+        None,
+        "html",
+    ] and request.accept_mimetypes.accept_html
 
 
 def accepts_json(request):
-    return (
-        (request.view_args or {}).get("fmt") in [None, "json"]
-        and request.accept_mimetypes.accept_json
-    )
+    return (request.view_args or {}).get("fmt") in [
+        None,
+        "json",
+    ] and request.accept_mimetypes.accept_json
 
 
 def fmt_http_error(request, code, message):
     if accepts_html(request):
-        raise NotImplementedError()
+        return (
+            render_template(
+                "error.html", code=code, message=message, base_uri=BASE_URI
+            ),
+            code,
+        )
     else:
         return jsonify({"code": code, "message": message}), code
 
@@ -102,7 +115,7 @@ def search(**kwargs):
     results = do_search(request.args)
 
     if accepts_html(request):
-        raise NotImplementedError()
+        return render_template("search.html", base_uri=BASE_URI, **results)
     else:
         return jsonify(results)
 
@@ -162,6 +175,12 @@ def bookmark_controller(**kwargs):
                 abort(406)
         except NotFoundError:
             abort(404)
+
+
+@app.route("/static/<path>")
+def static_files(path):
+    return send_from_directory("static", path)
+
 
 @app.errorhandler(ConnectionError)
 def handle_connection_error(*args):
