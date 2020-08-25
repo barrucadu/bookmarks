@@ -32,7 +32,35 @@ app.jinja_env.filters["quote_plus"] = lambda u: quote_plus(u)
 es = Elasticsearch([os.getenv("ES_HOST", "http://localhost:9200")])
 
 
-def do_search(request_args):
+def sanitize(html):
+    h = HTML2Text()
+    h.ignore_links = True
+    h.ignore_images = True
+    h.ignore_emphasis = True
+    h.ignore_tables = True
+    return h.handle(html)
+
+
+def transform_hit(hit, highlight):
+    out = hit["_source"]
+    if highlight:
+        try:
+            fragment = hit["highlight"]["content"][0]
+            if fragment:
+                unhighlighted_fragment = fragment.replace("<mark>", "").replace(
+                    "</mark>", ""
+                )
+                if not hit["_source"]["content"].startswith(unhighlighted_fragment):
+                    fragment = "…" + fragment
+                if not hit["_source"]["content"].endswith(unhighlighted_fragment):
+                    fragment += "…"
+                out["fragment"] = fragment
+        except KeyError:
+            pass
+    return out
+
+
+def do_search(request_args, highlight=False):
     q = request_args.get("q")
     if q:
         query = {"query_string": {"query": q, "default_field": "content"}}
@@ -44,22 +72,28 @@ def do_search(request_args):
     except Exception:
         page = 0
 
-    results = es.search(
-        index=ES_INDEX,
-        body={
-            "query": {"bool": {"must": [query]}},
-            "aggs": {"tags": {"terms": {"field": "tag", "size": 500}}},
-            "from": page * PAGE_SIZE,
-            "size": PAGE_SIZE,
-        },
-    )
+    body = {
+        "query": {"bool": {"must": [query]}},
+        "aggs": {"tags": {"terms": {"field": "tag", "size": 500}}},
+        "from": page * PAGE_SIZE,
+        "size": PAGE_SIZE,
+    }
+    if highlight:
+        body["highlight"] = {
+            "fields": {"content": {}},
+            "fragment_size": 300,
+            "pre_tags": "<mark>",
+            "post_tags": "</mark>",
+        }
+
+    results = es.search(index=ES_INDEX, body=body)
 
     count = results["hits"]["total"]["value"]
     return {
         "tags": {
             d["key"]: d["doc_count"] for d in results["aggregations"]["tags"]["buckets"]
         },
-        "results": [hit["_source"] for hit in results["hits"]["hits"]],
+        "results": [transform_hit(hit, highlight) for hit in results["hits"]["hits"]],
         "count": count,
         "page": page + 1,
         "pages": math.ceil(count / PAGE_SIZE),
@@ -112,11 +146,11 @@ def search(**kwargs):
     if not accepts_html(request) and not accepts_json(request):
         abort(406)
 
-    results = do_search(request.args)
-
     if accepts_html(request):
+        results = do_search(request.args, highlight=True)
         return render_template("search.html", base_uri=BASE_URI, **results)
     else:
+        results = do_search(request.args)
         return jsonify(results)
 
 
@@ -151,7 +185,7 @@ def bookmark_controller(**kwargs):
             "url": url,
             "tag": tags,
             "indexed_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            "content": HTML2Text().handle(r.text),
+            "content": sanitize(r.text),
         }
 
         try:

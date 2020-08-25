@@ -82,6 +82,17 @@ a:active, a:hover {
     padding: 0;
 }
 
+.results__result__fragment {
+    margin: 8px 0;
+    padding: 0;
+    font-style: italic;
+}
+
+.results__result__fragment mark {
+    background: none;
+    text-shadow: 0 0 3px #00a55e;
+}
+
 .results__result__tags {
     list-style-type: none;
     margin: 0;
