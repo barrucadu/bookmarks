@@ -60,6 +60,20 @@ def transform_hit(hit, highlight):
     return out
 
 
+def all_tags():
+    results = es.search(
+        index=ES_INDEX,
+        body={
+            "query": {"bool": {"must": [{"match_all": {}}]}},
+            "aggs": {"tags": {"terms": {"field": "tag", "size": 500}}},
+        },
+    )
+
+    return {
+        d["key"]: d["doc_count"] for d in results["aggregations"]["tags"]["buckets"]
+    }
+
+
 def do_search(request_args, highlight=False):
     q = request_args.get("q")
     if q:
@@ -160,7 +174,9 @@ def add_bookmark(**kwargs):
     if not accepts_html(request):
         abort(406)
 
-    return render_template("add.html", base_uri=BASE_URI)
+    return render_template(
+        "add.html", base_uri=BASE_URI, all_tags=list(all_tags().keys())
+    )
 
 
 @app.route("/url", methods=["GET", "DELETE", "HEAD", "POST", "PUT"])
@@ -204,7 +220,10 @@ def bookmark_controller(**kwargs):
             es.update(index=ES_INDEX, id=url, body={"doc": result})
             code = 200
         if accepts_html(request):
-            return render_template("post-add.html", base_uri=BASE_URI, result=result), code
+            return (
+                render_template("post-add.html", base_uri=BASE_URI, result=result),
+                code,
+            )
         else:
             return jsonify(result), code
     elif request.method == "DELETE":
