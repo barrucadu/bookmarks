@@ -1,0 +1,18 @@
+mappings:
+  properties:
+    title:
+      type: text
+      analyzer: english
+
+    url:
+      type: keyword
+
+    tag:
+      type: keyword
+
+    indexed_at:
+      type: date
+
+    content:
+      type: text
+      analyzer: english
