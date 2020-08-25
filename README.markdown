@@ -3,6 +3,8 @@ bookmarks
 
 A database and web app to keep track of my bookmarks, deployed to [bookmarks.nyarlathotep](http://bookmarks.nyarlathotep/).
 
+![screenshot](screenshot.png)
+
 ## Build / deploy a new release
 
 ```
