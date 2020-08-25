@@ -1,0 +1,39 @@
+{% extends "_layout.html" %}
+{% block head %}
+<script>
+  function add_tag_entry() {
+      let container = document.getElementById("tags-container");
+      let position = document.getElementById("js-insert-before");
+      let input = document.createElement("input");
+      input.setAttribute("class", "add-form__row__input add-form__row__input--narrow");
+      input.setAttribute("type", "text");
+      input.setAttribute("name", "tag");
+      container.insertBefore(input, position);
+      container.insertBefore(document.createTextNode(" "), position);
+  }
+</script>
+{% endblock %}
+{% block body %}
+<nav class="page-navigation"><a href="search">Return to search page</a></nav>
+<form class="add-form" action="/url" method="post">
+  <div class="add-form__row">
+    <label class="add-form__row__label add-form__row__label--required" for="url">URL</label>
+    <input type="text" class="add-form__row__input" name="url" id="url" required>
+  </div>
+
+  <div class="add-form__row">
+    <label class="add-form__row__label add-form__row__label--required" for="title">Title</label>
+    <input type="text" class="add-form__row__input" name="title" id="title" required>
+  </div>
+
+  <div class="add-form__row" id="tags-container">
+    <label class="add-form__row__label" for="tag_0">Tags</label>
+    <input class="add-form__row__input add-form__row__input--narrow" type="text" id="tag_0" name="tag">
+    <input class="add-form__row__button" id="js-insert-before" type="button" onclick="add_tag_entry()" value="+">
+  </div>
+
+  <div class="add-form__row">
+    <input class="add-form__row__button add-form__row__button--submit" type="submit" value="Submit link">
+  </div>
+</form>
+{% endblock %}

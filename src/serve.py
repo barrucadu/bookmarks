@@ -154,6 +154,15 @@ def search(**kwargs):
         return jsonify(results)
 
 
+@app.route("/add")
+@app.route("/add.<fmt>")
+def add_bookmark(**kwargs):
+    if not accepts_html(request):
+        abort(406)
+
+    return render_template("add.html", base_uri=BASE_URI)
+
+
 @app.route("/url", methods=["GET", "DELETE", "HEAD", "POST", "PUT"])
 @app.route("/url.<fmt>", methods=["GET", "DELETE", "HEAD", "POST", "PUT"])
 def bookmark_controller(**kwargs):
@@ -162,7 +171,7 @@ def bookmark_controller(**kwargs):
         abort(400)
 
     if request.method in ["POST", "PUT"]:
-        if not accepts_json(request):
+        if not accepts_html(request) and not accepts_json(request):
             abort(406)
 
         title = request.args.get("title") or request.form.get("title")
@@ -188,12 +197,16 @@ def bookmark_controller(**kwargs):
             "content": sanitize(r.text),
         }
 
+        code = 201
         try:
             es.create(index=ES_INDEX, id=url, body=result)
-            return jsonify(result), 201
         except ConflictError:
             es.update(index=ES_INDEX, id=url, body={"doc": result})
-            return jsonify(result), 200
+            code = 200
+        if accepts_html(request):
+            return render_template("post-add.html", base_uri=BASE_URI, result=result), code
+        else:
+            return jsonify(result), code
     elif request.method == "DELETE":
         try:
             es.delete(index=ES_INDEX, id=url)

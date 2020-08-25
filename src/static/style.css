@@ -42,6 +42,10 @@ a:active, a:hover {
     text-decoration: underline;
 }
 
+.page-navigation {
+    margin: 0 0 1em 0;
+}
+
 .search-form {
 }
 
@@ -121,4 +125,48 @@ a:active, a:hover {
 .pagination__info {
     margin: 8px 0;
     padding: 0;
+}
+
+.add-form {
+}
+
+.add-form__row {
+    margin: 10px;
+}
+
+.add-form__row__label {
+    display: block;
+    font-weight: bold;
+}
+
+.add-form__row__label--required {
+    color: #ea4024;
+}
+
+.add-form__row__input {
+    display: inline-block;
+    font-size: 18px;
+    height: 32px;
+    border: 2px solid #4f535b;
+    width: 100%;
+    padding: 0 10px;
+    margin: 3px auto;
+}
+
+.add-form__row__input--narrow {
+    width: 200px;
+}
+
+.add-form__row__button {
+    padding: 6px;
+    background-color: #20abbb;
+    border: 2px solid transparent;
+    box-shadow: 0 2px 0 #0a0969;
+    color: #ffffff;
+}
+
+.add-form__row__button--submit {
+    padding: 10px 24px;
+    background-color: #fe5301;
+    box-shadow-color: #d43b0c;
 }

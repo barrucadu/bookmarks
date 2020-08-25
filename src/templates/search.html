@@ -1,5 +1,6 @@
 {% extends "_layout.html" %}
 {% block body %}
+<nav class="page-navigation"><a href="add">Submit a new link</a></nav>
 <form class="search-form">
   <input type="text" class="search-form__input" name="q" value="{% if q %}{{ q|e }}{% endif %}">
 </form>
