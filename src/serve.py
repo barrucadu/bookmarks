@@ -22,7 +22,7 @@ import requests
 
 ES_INDEX = "bookmarks"
 
-PAGE_SIZE = 50
+PAGE_SIZE = 20
 
 BASE_URI = os.getenv("BASE_URI", "http://bookmarks.nyarlathotep")
 
