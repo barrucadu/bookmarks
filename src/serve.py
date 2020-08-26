@@ -218,7 +218,7 @@ def bookmark_controller(**kwargs):
         result = {
             "title": title.strip(),
             "url": url.strip(),
-            "tag": [t.strip() for t in tags if t.strip()],
+            "tag": sorted([t.strip().lower() for t in tags if t.strip()]),
             "indexed_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
             "content": sanitize(r.text),
         }
