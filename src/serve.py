@@ -203,25 +203,28 @@ def bookmark_controller(**kwargs):
 
         title = request.args.get("title") or request.form.get("title")
         tags = request.args.getlist("tag") or request.form.getlist("tag")
+        content = request.args.get("content") or request.form.get("content")
 
         if not title:
             abort(400)
 
-        # some websites (eg, rpg.net) block 'requests'
-        r = requests.get(
-            url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0"
-            },
-        )
-        r.raise_for_status()
+        if not content:
+            # some websites (eg, rpg.net) block 'requests'
+            r = requests.get(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0"
+                },
+            )
+            r.raise_for_status()
+            content = sanitize(r.text)
 
         result = {
             "title": title.strip(),
             "url": url.strip(),
             "tag": sorted([t.strip().lower() for t in tags if t.strip()]),
             "indexed_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            "content": sanitize(r.text),
+            "content": content,
         }
 
         code = 201
