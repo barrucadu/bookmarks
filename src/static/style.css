@@ -154,6 +154,10 @@ a:active, a:hover {
     font-family: 'Gentium Book Basic', Cambria, Georgia, Times, serif;
 }
 
+.add-form__row__input--url {
+    font-family: 'Fira Mono', monospace;
+}
+
 .add-form__row__input--narrow {
     width: 200px;
 }
