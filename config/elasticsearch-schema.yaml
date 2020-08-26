@@ -3,6 +3,9 @@ mappings:
     title:
       type: text
       analyzer: english
+      copy_to: title_sort
+    title_sort:
+      type: keyword
 
     url:
       type: keyword

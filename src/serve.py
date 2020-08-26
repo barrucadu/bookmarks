@@ -93,6 +93,7 @@ def do_search(request_args, highlight=False):
         "aggs": {"tags": {"terms": {"field": "tag", "size": 500}}},
         "from": page * PAGE_SIZE,
         "size": PAGE_SIZE,
+        "sort": ["_score", "title_sort"],
     }
     if highlight:
         body["highlight"] = {
