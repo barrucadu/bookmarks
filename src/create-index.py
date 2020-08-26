@@ -2,7 +2,6 @@
 
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import RequestError
-from elasticsearch.helpers import bulk
 
 import os
 import sys
@@ -41,13 +40,14 @@ if len(sys.argv) == 2:
         sys.exit(1)
 
     try:
-        ok, errors = bulk(
-            es,
-            [
-                {"_index": ES_INDEX, "_id": doc_id, "_source": doc}
-                for doc_id, doc in dump.items()
-            ],
-        )
+        ok = 0
+        errors = []
+        for doc_id, doc in dump.items():
+            try:
+                es.create(index=ES_INDEX, id=doc_id, body=doc)
+                ok += 1
+            except Exception as e:
+                errors.append(f"could not index {doc_id}: {e}")
         print(f"Indexed {ok} records")
         if errors:
             print("")
