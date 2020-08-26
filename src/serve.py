@@ -77,7 +77,7 @@ def all_tags():
 
 
 def do_search(request_args, highlight=False):
-    q = request_args.get("q")
+    q = request_args.get("q", "")
     if q:
         query = {"query_string": {"query": q, "default_field": "content"}}
     else:
