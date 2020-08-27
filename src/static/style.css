@@ -53,9 +53,10 @@ a:active, a:hover {
     background: #fff url("/static/search.svg") no-repeat -5px -3px;
     padding-left: 30px;
     font-size: 18px;
-    height: 32px;
+    height: 40px;
     border: 2px solid #4f535b;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .result-count {
@@ -168,6 +169,7 @@ a:active, a:hover {
     padding: 0 10px;
     margin: 3px auto;
     font-family: 'Gentium Book Basic', Cambria, Georgia, Times, serif;
+    box-sizing: border-box;
 }
 
 .add-form__row__input--url {
@@ -187,6 +189,7 @@ a:active, a:hover {
     padding: 10px;
     margin: 3px auto;
     font-family: 'Gentium Book Basic', Cambria, Georgia, Times, serif;
+    box-sizing: border-box;
 }
 
 .add-form__row__button {
