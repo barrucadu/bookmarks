@@ -5,16 +5,6 @@
 {% block body %}
 <p>Result added successfully.</p>
 <ol class="results">
-  <li class="results__result">
-    <h2 class="results__result__title"><a href="{{ result.url|e }}">{{ result.title|e }}</a></h2>
-    <p class="results__result__url">{{ result.url|e }}</p>
-    {% if result.tag %}
-    <ul class="results__result__tags">
-      {% for tag in result.tag %}
-      <li class="results__result__tags__tag">{{ tag|e }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-  </li>
+  {% include "_result.partial.html" %}
 </ol>
 {% endblock %}

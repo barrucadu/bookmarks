@@ -19,10 +19,18 @@ from werkzeug.exceptions import HTTPException
 import math
 import os
 import requests
+import time
 
 ES_INDEX = "bookmarks"
 
 PAGE_SIZE = 20
+
+MAX_CONTENT_FIELD_LEN = 1000000
+
+# some websites (eg, rpg.net) block 'requests'
+FAKE_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0"
+)
 
 BASE_URI = os.getenv("BASE_URI", "http://bookmarks.nyarlathotep")
 
@@ -43,8 +51,24 @@ def sanitize(html):
     return h.handle(html)
 
 
-def transform_hit(hit, highlight):
+def transform_hit(hit, highlight=False):
     out = hit["_source"]
+
+    primary_url = out["url"]
+    if type(out["url"]) is list:
+        primary_url = out["url"][0]
+        out["parts"] = [
+            {"url": out["url"][i], "title": out["title"][i + 1]}
+            for i in range(len(out["url"]))
+        ]
+        out["title"] = out["title"][0]
+        del out["url"]
+
+    try:
+        out["domain"] = primary_url.split("/")[2]
+    except IndexError:
+        out["domain"] = primary_url
+
     if highlight:
         try:
             fragment = hit["highlight"]["content"][0]
@@ -148,6 +172,16 @@ def fmt_http_error(request, code, message):
         return jsonify({"code": code, "message": message}), code
 
 
+def get_field(request, field):
+    value = request.args.get(field) or request.form.get(field) or ""
+    return value.strip()
+
+
+def getlist_field(request, field):
+    values = request.args.getlist(field) or request.form.getlist(field) or []
+    return [v.strip() for v in values if v.strip()]
+
+
 ###############################################################################
 ## Controllers
 
@@ -190,7 +224,7 @@ def add_bookmark(**kwargs):
 @app.route("/url", methods=["GET", "DELETE", "HEAD", "POST", "PUT"])
 @app.route("/url.<fmt>", methods=["GET", "DELETE", "HEAD", "POST", "PUT"])
 def bookmark_controller(**kwargs):
-    url = request.args.get("url") or request.form.get("url")
+    url = get_field(request, "url")
     if not url:
         abort(400)
 
@@ -201,28 +235,44 @@ def bookmark_controller(**kwargs):
         if not accepts_html(request) and not accepts_json(request):
             abort(406)
 
-        title = request.args.get("title") or request.form.get("title")
-        tags = request.args.getlist("tag") or request.form.getlist("tag")
-        content = request.args.get("content") or request.form.get("content")
+        collection_title = get_field(request, "collection-title")
+        titles = getlist_field(request, "title")
+        urls = getlist_field(request, "url")
+        tags = getlist_field(request, "tag")
+        content = get_field(request, "content")
 
-        if not title:
+        if not titles:
             abort(400)
 
+        if len(titles) != len(urls):
+            abort(400)
+
+        if len(titles) > 1:
+            if collection_title:
+                titles.insert(0, collection_title)
+            else:
+                abort(400)
+
         if not content:
-            # some websites (eg, rpg.net) block 'requests'
-            r = requests.get(
-                url,
-                headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0"
-                },
-            )
-            r.raise_for_status()
-            content = sanitize(r.text)
+            for u in urls:
+                if len(content) >= MAX_CONTENT_FIELD_LEN:
+                    break
+                r = requests.get(u, headers={"User-Agent": FAKE_USER_AGENT})
+                if r.status_code in [429, 503, 504]:
+                    time.sleep(10)
+                    r = requests.get(u, headers={"User-Agent": FAKE_USER_AGENT})
+                    if r.status_code in [429, 503, 504] and content:
+                        # just skip this URL if we've already fetched
+                        # some prior parts
+                        continue
+                r.raise_for_status()
+                content += sanitize(r.text)
+        content = content[0:MAX_CONTENT_FIELD_LEN]
 
         result = {
-            "title": title.strip(),
-            "url": url.strip(),
-            "tag": sorted([t.strip().lower() for t in tags if t.strip()]),
+            "title": titles if len(titles) > 1 else titles[0],
+            "url": urls if len(urls) > 1 else urls[0],
+            "tag": sorted([t.lower() for t in tags]),
             "indexed_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
             "content": content,
         }
@@ -235,7 +285,11 @@ def bookmark_controller(**kwargs):
             code = 200
         if accepts_html(request):
             return (
-                render_template("post-add.html", base_uri=BASE_URI, result=result),
+                render_template(
+                    "post-add.html",
+                    base_uri=BASE_URI,
+                    result=transform_hit({"_source": result}),
+                ),
                 code,
             )
         else:

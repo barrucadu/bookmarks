@@ -105,7 +105,6 @@
 
   function add_tag_entry() {
       let container = document.getElementById("tags-container");
-      let position = document.getElementById("js-insert-before");
       let el = document.createElement("div");
       let input = document.createElement("input");
       el.setAttribute("class", "autocomplete");
@@ -113,31 +112,79 @@
       input.setAttribute("type", "text");
       input.setAttribute("name", "tag");
       el.appendChild(input);
-      container.insertBefore(el, position);
-      container.insertBefore(document.createTextNode(" "), position);
+      container.appendChild(el);
+      container.appendChild(document.createTextNode(" "));
       autocomplete(input, ALL_TAGS);
+  }
+
+  var num_parts = 0;
+
+  function add_part_entry() {
+      num_parts += 1;
+      let container = document.getElementById("parts-container");
+      let position = document.getElementById("insert-parts-before");
+      let url_row = document.createElement("div");
+      let url_row_label = document.createElement("label");
+      let url_row_input = document.createElement("input");
+      url_row.setAttribute("class", "add-form__row");
+      url_row_label.setAttribute("class", "add-form__row__label");
+      url_row_label.setAttribute("for", `url-${num_parts}`);
+      url_row_label.innerText = "Part URL";
+      url_row_input.setAttribute("class", "add-form__row__input add-form__row__input--url");
+      url_row_input.setAttribute("type", "text");
+      url_row_input.setAttribute("name", "url");
+      url_row_input.setAttribute("id", `url-${num_parts}`);
+      url_row.appendChild(url_row_label);
+      url_row.appendChild(url_row_input);
+      let title_row = document.createElement("div");
+      let title_row_label = document.createElement("label");
+      let title_row_input = document.createElement("input");
+      title_row.setAttribute("class", "add-form__row");
+      title_row_label.setAttribute("class", "add-form__row__label");
+      title_row_label.setAttribute("for", `title-${num_parts}`);
+      title_row_label.innerText = "Part title";
+      title_row_input.setAttribute("class", "add-form__row__input");
+      title_row_input.setAttribute("type", "text");
+      title_row_input.setAttribute("name", "title");
+      title_row_input.setAttribute("id", `title-${num_parts}`);
+      title_row.appendChild(title_row_label);
+      title_row.appendChild(title_row_input);
+      container.insertBefore(url_row, position);
+      container.insertBefore(title_row, position);
   }
 </script>
 {% endblock %}
 {% block body %}
 <nav class="page-navigation"><a href="search">Return to search page</a></nav>
-<form class="add-form" action="/url" method="post" autocomplete="off">
+<form class="add-form" id="parts-container" action="/url" method="post" autocomplete="off">
   <div class="add-form__row">
-    <label class="add-form__row__label add-form__row__label--required" for="url">URL</label>
+    <label class="add-form__row__label" for="collection-title">Collection title</label>
+    <input type="text" class="add-form__row__input" name="collection-title" id="collection-title">
+  </div>
+
+  <div class="add-form__row" id="tags-container">
+    <label class="add-form__row__label" for="tag_0">Collection tags</label>
+    <div class="autocomplete">
+      <input class="add-form__row__input add-form__row__input--narrow" type="text" id="tag_0" name="tag">
+    </div>
+  </div>
+
+  <div class="add-form__row">
+    <input class="add-form__row__button" type="button" onclick="add_tag_entry()" value="Add tag">
+  </div>
+
+  <div class="add-form__row">
+    <label class="add-form__row__label add-form__row__label--required" for="url">Part URL</label>
     <input type="text" class="add-form__row__input add-form__row__input--url" name="url" id="url" required>
   </div>
 
   <div class="add-form__row">
-    <label class="add-form__row__label add-form__row__label--required" for="title">Title</label>
+    <label class="add-form__row__label add-form__row__label--required" for="title">Part title</label>
     <input type="text" class="add-form__row__input" name="title" id="title" required>
   </div>
 
-  <div class="add-form__row" id="tags-container">
-    <label class="add-form__row__label" for="tag_0">Tags</label>
-    <div class="autocomplete">
-      <input class="add-form__row__input add-form__row__input--narrow" type="text" id="tag_0" name="tag">
-    </div>
-    <input class="add-form__row__button" id="js-insert-before" type="button" onclick="add_tag_entry()" value="+">
+  <div class="add-form__row" id="insert-parts-before">
+    <input class="add-form__row__button" type="button" onclick="add_part_entry()" value="Add part">
   </div>
 
   <div class="add-form__row">
