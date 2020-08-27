@@ -2,7 +2,7 @@ mappings:
   properties:
     title:
       type: text
-      analyzer: english
+      analyzer: my_english
       copy_to: title_sort
     title_sort:
       type: keyword
@@ -18,4 +18,25 @@ mappings:
 
     content:
       type: text
-      analyzer: english
+      analyzer: my_english
+
+settings:
+  analysis:
+    filter:
+      english_stop:
+        type: stop
+        stopwords: _english_
+      english_stemmer:
+        type: stemmer
+        language: english
+      english_possessive_stemmer:
+        type: stemmer
+        language: possessive_english
+    analyzer:
+      my_english:
+        tokenizer: standard
+        filter:
+          - english_possessive_stemmer
+          - lowercase
+          - english_stop
+          - english_stemmer
