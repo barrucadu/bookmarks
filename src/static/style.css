@@ -47,6 +47,7 @@ a:active, a:hover {
 }
 
 .search-form {
+    margin: 0 0 8px 0;
 }
 
 .search-form__input {
@@ -60,6 +61,43 @@ a:active, a:hover {
 }
 
 .result-count {
+    margin: 0 0 8px 0;
+}
+
+.tags {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    margin: 0 0 8px 0;
+}
+
+.tags__tag {
+    display: inline-block;
+    padding: 4px 0;
+}
+
+.tags__tag__count {
+    background-color: #5e00a5;
+    color: #ffffff;
+    padding: 3px 6px;
+    border-radius: 10px 0 0 5px;
+    margin: 0;
+}
+
+.tags__tag__name {
+    background-color: #00a55e;
+    color: #ffffff;
+    padding: 3px 6px;
+    border-radius: 0 5px 10px 0;
+    margin: 0;
+}
+
+.tags__tag__more {
+    background-color: #a5a5a5;
+    color: #ffffff;
+    padding: 3px 6px;
+    border-radius: 10px 5px;
+    margin: 0;
 }
 
 .results {
