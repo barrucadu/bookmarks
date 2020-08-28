@@ -3,6 +3,10 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
 
+import googleapiclient.discovery
+import googleapiclient.errors
+
+import os
 import requests
 import sys
 import time
@@ -10,6 +14,8 @@ import time
 TIMEOUT_BACKOFF_SECONDS = 10
 
 MAX_CONTENT_FIELD_LEN = 1000000
+
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
 # some websites (eg, rpg.net) block 'requests'
 USER_AGENT = (
@@ -58,6 +64,21 @@ def wikipedia_scraper(soup):
     return soup.find(id="content").text
 
 
+def youtube_scraper(video_id):
+    youtube = googleapiclient.discovery.build(
+        "youtube", "v3", developerKey=YOUTUBE_API_KEY
+    )
+    request = youtube.videos().list(part="snippet,contentDetails", id=video_id)
+    response = request.execute()["items"][0]["snippet"]
+    return (
+        response["title"]
+        + "\n"
+        + response["channelTitle"]
+        + "\n"
+        + response["description"]
+    )
+
+
 def scrape_page_content(url):
     try:
         if url.startswith("https://thealexandrian.net/wordpress/"):
@@ -70,6 +91,8 @@ def scrape_page_content(url):
             return goblinpunch_scraper(download_page_content(url))
         if url.startswith("https://en.wikipedia.org/wiki/"):
             return wikipedia_scraper(download_page_content(url))
+        if url.startswith("https://www.youtube.com/watch?v="):
+            return youtube_scraper(url.split("v=")[1].split("&")[0])
     except Exception:
         return default_scraper(download_page_content(url))
 
