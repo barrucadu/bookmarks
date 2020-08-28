@@ -2,6 +2,7 @@
 
 from indexer import index_collection
 
+from datetime import datetime
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConflictError, ConnectionError, NotFoundError
 from flask import (
@@ -235,12 +236,28 @@ def bookmark_controller(**kwargs):
         tags = getlist_field(request, "tag")
         content = get_field(request, "content")
 
-        result = index_collection(
-            titles, urls, tags=tags, collection_title=collection_title, content=content,
-        )
+        if not titles:
+            return None
 
-        if result is None:
-            abort(400)
+        if len(titles) != len(urls):
+            return None
+
+        if len(titles) > 1:
+            if collection_title:
+                titles.insert(0, collection_title)
+            else:
+                return None
+
+        if not content:
+            content = index_collection(urls)
+
+        result = {
+            "title": titles if len(titles) > 1 else titles[0],
+            "url": urls if len(urls) > 1 else urls[0],
+            "tag": sorted([t.lower() for t in tags]),
+            "indexed_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "content": content,
+        }
 
         code = 201
         try:
@@ -291,31 +308,22 @@ def bookmark_reindex(**kwargs):
 
     try:
         result = es.get(index=ES_INDEX, id=url)
+        doc = result["_source"]
 
         if accepts_json(request):
-            titles = result["_source"]["title"]
-            urls = result["_source"]["url"]
-            collection_title = None
-            if type(titles) is list:
-                collection_title = titles.pop(0)
-            else:
-                titles = [titles]
+            urls = doc["url"]
+            if not type(urls) is list:
                 urls = [urls]
 
             content = get_field(request, "content")
-
-            result = index_collection(
-                titles,
-                urls,
-                tags=result["_source"]["tag"],
-                collection_title=collection_title,
-                content=content,
-            )
-
-            if result is None:
+            if not content:
+                content = index_collection(urls)
+            if not content:
                 abort(500)
 
-            es.update(index=ES_INDEX, id=url, body={"doc": result})
+            doc["content"] = content
+
+            es.update(index=ES_INDEX, id=url, body={"doc": doc})
             return jsonify(result)
         else:
             abort(406)

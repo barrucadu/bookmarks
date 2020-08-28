@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from bs4 import BeautifulSoup
-from datetime import datetime
 
 import googleapiclient.discovery
 import googleapiclient.errors
@@ -97,35 +96,15 @@ def scrape_page_content(url):
         return default_scraper(download_page_content(url))
 
 
-def index_collection(titles, urls, tags=[], collection_title=None, content=None):
-    if not titles:
-        return None
+def index_collection(urls):
+    content = ""
 
-    if len(titles) != len(urls):
-        return None
+    for u in urls:
+        if len(content) >= MAX_CONTENT_FIELD_LEN:
+            break
+        content += ("\n" + (scrape_page_content(u) or "")).strip()
 
-    if len(titles) > 1:
-        if collection_title:
-            titles.insert(0, collection_title)
-        else:
-            return None
-
-    if not content:
-        content = ""
-        for u in urls:
-            if len(content) >= MAX_CONTENT_FIELD_LEN:
-                break
-            content += scrape_page_content(u) or ""
-            content += "\n"
-    content = content[0:MAX_CONTENT_FIELD_LEN]
-
-    return {
-        "title": titles if len(titles) > 1 else titles[0],
-        "url": urls if len(urls) > 1 else urls[0],
-        "tag": sorted([t.lower() for t in tags]),
-        "indexed_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-        "content": content,
-    }
+    return content[0:MAX_CONTENT_FIELD_LEN]
 
 
 if __name__ == "__main__":
@@ -134,11 +113,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     urls = sys.argv[1:]
-    titles = ["." for u in urls]
-    result = index_collection(titles, urls, collection_title=".")
-
-    if result is None:
-        print("An error occurred.")
-        sys.exit(2)
-
-    print(result["content"])
+    print(index_collection(urls))
