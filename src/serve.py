@@ -325,6 +325,7 @@ def bookmark_reindex(**kwargs):
                 abort(500)
 
             doc["content"] = content
+            doc["indexed_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
             es.update(index=ES_INDEX, id=url, body={"doc": doc})
             return jsonify(result)
