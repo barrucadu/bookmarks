@@ -14,7 +14,7 @@
 
 {% if tags %}
 <ul class="tags">
-  {% for name, count in tags.items() %}
+  {% for count, name in restricting_tags %}
   <li class="tags__tag">
     {% if loop.index0 < 25 %}
     <a href="search?q={% if q %}{{ (q + " AND tag:" + name)|quote_plus }}{% else %}{{ ("tag:" + name)|quote_plus }}{% endif %}&amp;page={{ page|e }}">

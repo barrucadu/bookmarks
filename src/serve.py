@@ -199,8 +199,20 @@ def search(**kwargs):
 
     if accepts_html(request):
         results = do_search(request.args, highlight=True)
+        restricting_tags = sorted(
+            [
+                (count, name)
+                for name, count in results["tags"].items()
+                if count != results["count"]
+            ],
+            reverse=True,
+        )
         return render_template(
-            "search.html", allow_writes=ALLOW_WRITES, base_uri=BASE_URI, **results
+            "search.html",
+            allow_writes=ALLOW_WRITES,
+            base_uri=BASE_URI,
+            restricting_tags=restricting_tags,
+            **results,
         )
     else:
         results = do_search(request.args)
