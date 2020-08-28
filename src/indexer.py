@@ -35,49 +35,33 @@ def default_scraper(soup):
 
 
 def alexandrian_scraper(entry_id, soup):
-    body = soup.find(id=f"post-{entry_id}")
-    if body:
-        return body.text
-
-    return default_scraper(soup)
+    return soup.find(id=f"post-{entry_id}").text
 
 
 def angrygm_scraper(soup):
-    articles = soup.find_all("article")
-    if articles and articles[0]:
-        return articles[0].text
-
-    return default_scraper(soup)
+    return soup.find_all("article")[0].text
 
 
 def goblinpunch_scraper(soup):
-    body = soup.find(class_="post-body")
-    if body:
-        return body.text
-
-    return default_scraper(soup)
+    return soup.find(class_="post-body").text
 
 
 def wikipedia_scraper(soup):
-    body = soup.find(id="content")
-    if body:
-        return body.text
-
-    return default_scraper(soup)
+    return soup.find(id="content").text
 
 
-def scraper_for_url(url):
-    bits = url.split("/")
-    if url.startswith("https://thealexandrian.net/wordpress/") and len(bits) >= 5:
-        return lambda soup: alexandrian_scraper(bits[4], soup)
-    if url.startswith("https://theangrygm.com/"):
-        return angrygm_scraper
-    if url.startswith("http://goblinpunch.blogspot.com/"):
-        return goblinpunch_scraper
-    if url.startswith("https://en.wikipedia.org/wiki/"):
-        return wikipedia_scraper
-
-    return default_scraper
+def scrape_page_content(url):
+    try:
+        if url.startswith("https://thealexandrian.net/wordpress/"):
+            return alexandrian_scraper(url.split("/")[4], download_page_content(url))
+        if url.startswith("https://theangrygm.com/"):
+            return angrygm_scraper(download_page_content(url))
+        if url.startswith("http://goblinpunch.blogspot.com/"):
+            return goblinpunch_scraper(download_page_content(url))
+        if url.startswith("https://en.wikipedia.org/wiki/"):
+            return wikipedia_scraper(download_page_content(url))
+    except Exception:
+        return default_scraper(download_page_content(url))
 
 
 def index_collection(titles, urls, tags=[], collection_title=None, content=None):
@@ -98,7 +82,7 @@ def index_collection(titles, urls, tags=[], collection_title=None, content=None)
         for u in urls:
             if len(content) >= MAX_CONTENT_FIELD_LEN:
                 break
-            content += scraper_for_url(u)(download_page_content(u))
+            content += scrape_page_content(u) or ""
             content += "\n"
     content = content[0:MAX_CONTENT_FIELD_LEN]
 
