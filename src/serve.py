@@ -28,6 +28,8 @@ BASE_URI = os.getenv("BASE_URI", "http://bookmarks.nyarlathotep")
 
 ALLOW_WRITES = os.getenv("ALLOW_WRITES", "0") == "1"
 
+RESULT_FIELDS = ["title", "url", "tag", "indexed_at"]
+
 app = Flask(__name__)
 app.jinja_env.filters["quote_plus"] = lambda u: quote_plus(u)
 
@@ -35,7 +37,7 @@ es = Elasticsearch([os.getenv("ES_HOST", "http://localhost:9200")])
 
 
 def transform_hit(hit, highlight=False):
-    out = hit["_source"]
+    out = {k: v for k, v in hit["_source"].items() if k in RESULT_FIELDS}
 
     primary_url = out["url"]
     if type(out["url"]) is list:
@@ -253,6 +255,7 @@ def bookmark_controller(**kwargs):
 
         result = {
             "title": titles if len(titles) > 1 else titles[0],
+            "title_sort": titles[0],
             "url": urls if len(urls) > 1 else urls[0],
             "tag": sorted([t.lower() for t in tags]),
             "indexed_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),

@@ -3,7 +3,7 @@ mappings:
     title:
       type: text
       analyzer: my_english
-      copy_to: title_sort
+
     title_sort:
       type: keyword
 
