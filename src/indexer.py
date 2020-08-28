@@ -42,6 +42,14 @@ def angrygm_scraper(soup):
     return soup.find_all("article")[0].text
 
 
+def artofmanliness_scraper(soup):
+    header = soup.find_all(class_="post-title")[0]
+    body = soup.find_all(class_="post-content-column")[0]
+    for el in body.find_all("div"):
+        el.clear()
+    return header.text + "\n" + body.text
+
+
 def goblinpunch_scraper(soup):
     return soup.find(class_="post-body").text
 
@@ -56,6 +64,8 @@ def scrape_page_content(url):
             return alexandrian_scraper(url.split("/")[4], download_page_content(url))
         if url.startswith("https://theangrygm.com/"):
             return angrygm_scraper(download_page_content(url))
+        if url.startswith("https://www.artofmanliness.com/articles/"):
+            return artofmanliness_scraper(download_page_content(url))
         if url.startswith("http://goblinpunch.blogspot.com/"):
             return goblinpunch_scraper(download_page_content(url))
         if url.startswith("https://en.wikipedia.org/wiki/"):
