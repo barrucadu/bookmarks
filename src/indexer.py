@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
+from bs4 import BeautifulSoup
 from datetime import datetime
-from html2text import HTML2Text
 
 import requests
 import sys
@@ -27,12 +27,7 @@ def download_page_content(url):
     if r.status_code != 200:
         return ""
 
-    h = HTML2Text()
-    h.ignore_links = True
-    h.ignore_images = True
-    h.ignore_emphasis = True
-    h.ignore_tables = True
-    return h.handle(r.text)
+    return BeautifulSoup(r.text, "html.parser").text
 
 
 def index_collection(titles, urls, tags=[], collection_title=None, content=None):
