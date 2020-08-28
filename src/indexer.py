@@ -27,7 +27,27 @@ def download_page_content(url):
     if r.status_code != 200:
         return ""
 
-    return BeautifulSoup(r.text, "html.parser").text
+    return BeautifulSoup(r.text, "html.parser")
+
+
+def default_scraper(soup):
+    return soup.text
+
+
+def alexandrian_scraper(entry_id, soup):
+    body = soup.find(id=f"post-{entry_id}")
+    if body:
+        return body.text
+
+    return default_scraper(soup)
+
+
+def scraper_for_url(url):
+    bits = url.split("/")
+    if url.startswith("https://thealexandrian.net/wordpress/") and len(bits) >= 5:
+        return lambda soup: alexandrian_scraper(bits[4], soup)
+
+    return default_scraper
 
 
 def index_collection(titles, urls, tags=[], collection_title=None, content=None):
@@ -48,7 +68,7 @@ def index_collection(titles, urls, tags=[], collection_title=None, content=None)
         for u in urls:
             if len(content) >= MAX_CONTENT_FIELD_LEN:
                 break
-            content += download_page_content(u)
+            content += scraper_for_url(u)(download_page_content(u))
             content += "\n"
     content = content[0:MAX_CONTENT_FIELD_LEN]
 
