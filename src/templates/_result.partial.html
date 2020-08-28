@@ -26,7 +26,15 @@
   {% if result.tag %}
   <ul class="results__result__tags">
     {% for tag in result.tag %}
-    <li class="results__result__tags__tag">{{ tag|e }}</li>
+    <li class="results__result__tags__tag">
+    {% if link_tags %}
+      <a href="search?q={% if q %}{{ (q + " AND tag:" + tag)|quote_plus }}{% else %}{{ ("tag:" + tag)|quote_plus }}{% endif %}&amp;page={{ page|e }}">
+    {% endif %}
+      <span class="results__result__tags__tag__name">{{ tag|e }}</span>
+    {% if link_tags %}
+      </a>
+    {% endif %}
+    </li>
     {% endfor %}
   </ul>
   {% endif %}

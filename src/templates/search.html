@@ -17,7 +17,9 @@
   {% for name, count in tags.items() %}
   <li class="tags__tag">
     {% if loop.index0 < 25 %}
-    <span class="tags__tag__count">{{ count|e }}</span><span class="tags__tag__name">{{ name|e }}</span>
+    <a href="search?q={% if q %}{{ (q + " AND tag:" + name)|quote_plus }}{% else %}{{ ("tag:" + name)|quote_plus }}{% endif %}&amp;page={{ page|e }}">
+      <span class="tags__tag__count">{{ count|e }}</span><span class="tags__tag__name">{{ name|e }}</span>
+    </a>
     {% elif loop.index0 == 25 %}
     <span class="tags__tag__more">{{ (tags|length - 25)|e }} more tags omitted&hellip;</span>
     {% endif %}
@@ -28,6 +30,7 @@
 
 {% if results %}
 <ol class="results">
+  {% set link_tags = True %}
   {% for result in results %}
   {% include "_result.partial.html" %}
   {% endfor %}

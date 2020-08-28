@@ -75,6 +75,9 @@ a:active, a:hover {
     display: inline-block;
     padding: 4px 0;
 }
+.tags__tag a {
+    color: #ffffff;
+}
 
 .tags__tag__count {
     background-color: #5e00a5;
@@ -160,6 +163,13 @@ a:active, a:hover {
 
 .results__result__tags__tag {
     display: inline-block;
+    padding: 4px 0;
+}
+.results__result__tags__tag a {
+    color: #ffffff;
+}
+
+.results__result__tags__tag__name {
     background-color: #00a55e;
     color: #ffffff;
     padding: 3px 6px;
