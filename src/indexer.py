@@ -42,10 +42,20 @@ def alexandrian_scraper(entry_id, soup):
     return default_scraper(soup)
 
 
+def angrygm_scraper(soup):
+    articles = soup.find_all("article")
+    if articles and articles[0]:
+        return articles[0].text
+
+    return default_scraper(soup)
+
+
 def scraper_for_url(url):
     bits = url.split("/")
     if url.startswith("https://thealexandrian.net/wordpress/") and len(bits) >= 5:
         return lambda soup: alexandrian_scraper(bits[4], soup)
+    if url.startswith("https://theangrygm.com/"):
+        return angrygm_scraper
 
     return default_scraper
 
