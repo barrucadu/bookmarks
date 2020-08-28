@@ -58,6 +58,14 @@ def goblinpunch_scraper(soup):
     return default_scraper(soup)
 
 
+def wikipedia_scraper(soup):
+    body = soup.find(id="content")
+    if body:
+        return body.text
+
+    return default_scraper(soup)
+
+
 def scraper_for_url(url):
     bits = url.split("/")
     if url.startswith("https://thealexandrian.net/wordpress/") and len(bits) >= 5:
@@ -66,6 +74,8 @@ def scraper_for_url(url):
         return angrygm_scraper
     if url.startswith("http://goblinpunch.blogspot.com/"):
         return goblinpunch_scraper
+    if url.startswith("https://en.wikipedia.org/wiki/"):
+        return wikipedia_scraper
 
     return default_scraper
 
