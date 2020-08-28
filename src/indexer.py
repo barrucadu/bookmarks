@@ -50,12 +50,22 @@ def angrygm_scraper(soup):
     return default_scraper(soup)
 
 
+def goblinpunch_scraper(soup):
+    body = soup.find(class_="post-body")
+    if body:
+        return body.text
+
+    return default_scraper(soup)
+
+
 def scraper_for_url(url):
     bits = url.split("/")
     if url.startswith("https://thealexandrian.net/wordpress/") and len(bits) >= 5:
         return lambda soup: alexandrian_scraper(bits[4], soup)
     if url.startswith("https://theangrygm.com/"):
         return angrygm_scraper
+    if url.startswith("http://goblinpunch.blogspot.com/"):
+        return goblinpunch_scraper
 
     return default_scraper
 
