@@ -279,6 +279,50 @@ def bookmark_controller(**kwargs):
             abort(404)
 
 
+@app.route("/url/reindex", methods=["POST"])
+@app.route("/url/reindex.<fmt>", methods=["POST"])
+def bookmark_reindex(**kwargs):
+    url = get_field(request, "url")
+    if not url:
+        abort(400)
+
+    if not ALLOW_WRITES:
+        abort(403)
+
+    try:
+        result = es.get(index=ES_INDEX, id=url)
+
+        if accepts_json(request):
+            titles = result["_source"]["title"]
+            urls = result["_source"]["url"]
+            collection_title = None
+            if type(titles) is list:
+                collection_title = titles.pop(0)
+            else:
+                titles = [titles]
+                urls = [urls]
+
+            content = get_field(request, "content")
+
+            result = index_collection(
+                titles,
+                urls,
+                tags=result["_source"]["tag"],
+                collection_title=collection_title,
+                content=content,
+            )
+
+            if result is None:
+                abort(500)
+
+            es.update(index=ES_INDEX, id=url, body={"doc": result})
+            return jsonify(result)
+        else:
+            abort(406)
+    except NotFoundError:
+        abort(404)
+
+
 @app.route("/static/<path>")
 def static_files(path):
     return send_from_directory("static", path)
