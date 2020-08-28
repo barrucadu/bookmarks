@@ -22,17 +22,24 @@ USER_AGENT = (
 )
 
 
-def download_page_content(url):
-    r = requests.get(url, headers={"User-Agent": USER_AGENT})
+def requests_get(url, **kwargs):
+    r = requests.get(url, headers={"User-Agent": USER_AGENT}, **kwargs)
     if r.status_code in [429, 503, 504]:
         time.sleep(TIMEOUT_BACKOFF_SECONDS)
-        r = requests.get(url, headers={"User-Agent": USER_AGENT})
+        r = requests.get(url, headers={"User-Agent": USER_AGENT}, **kwargs)
 
     print(f"GET {url} => {r.status_code}", file=sys.stderr)
-    if r.status_code != 200:
-        return ""
+    if r.status_code == 200:
+        return r
+    return None
 
-    return BeautifulSoup(r.text, "html.parser")
+
+def download_page_html(url, **kwargs):
+    return BeautifulSoup(requests_get(url, **kwargs).text, "html.parser")
+
+
+def download_page_json(url, **kwargs):
+    return requests_get(url, **kwargs).json()
 
 
 def default_scraper(soup):
@@ -59,6 +66,21 @@ def goblinpunch_scraper(soup):
     return soup.find(class_="post-body").text
 
 
+def govuk_scraper(path):
+    try:
+        search_data = download_page_json(
+            "https://www.gov.uk/api/search.json",
+            params={"filter_link": path, "fields": "title,indexable_content"},
+        )
+        result = search_data["results"][0]
+        return result["title"] + "\n" + result["indexable_content"]
+    except Exception as e:
+        print(f"falling back to content-api: {e}")
+        content_data = download_page_json(f"https://www.gov.uk/api/content{path}")
+        body = content_data["details"]["body"]
+        return BeautifulSoup(body, "html.parser").text
+
+
 def wikipedia_scraper(soup):
     return soup.find(id="content").text
 
@@ -81,19 +103,22 @@ def youtube_scraper(video_id):
 def scrape_page_content(url):
     try:
         if url.startswith("https://thealexandrian.net/wordpress/"):
-            return alexandrian_scraper(url.split("/")[4], download_page_content(url))
+            return alexandrian_scraper(url.split("/")[4], download_page_html(url))
         if url.startswith("https://theangrygm.com/"):
-            return angrygm_scraper(download_page_content(url))
+            return angrygm_scraper(download_page_html(url))
         if url.startswith("https://www.artofmanliness.com/articles/"):
-            return artofmanliness_scraper(download_page_content(url))
+            return artofmanliness_scraper(download_page_html(url))
         if url.startswith("http://goblinpunch.blogspot.com/"):
-            return goblinpunch_scraper(download_page_content(url))
+            return goblinpunch_scraper(download_page_html(url))
+        if url.startswith("https://www.gov.uk/"):
+            return govuk_scraper(url.split("https://www.gov.uk")[1])
         if url.startswith("https://en.wikipedia.org/wiki/"):
-            return wikipedia_scraper(download_page_content(url))
+            return wikipedia_scraper(download_page_html(url))
         if url.startswith("https://www.youtube.com/watch?v="):
             return youtube_scraper(url.split("v=")[1].split("&")[0])
-    except Exception:
-        return default_scraper(download_page_content(url))
+    except Exception as e:
+        print(f"falling back to html scraping: {e}")
+        return default_scraper(download_page_html(url))
 
 
 def index_collection(urls):
