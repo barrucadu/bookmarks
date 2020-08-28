@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from datetime import datetime
+from indexer import index_collection
+
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConflictError, ConnectionError, NotFoundError
 from flask import (
@@ -12,25 +13,15 @@ from flask import (
     request,
     send_from_directory,
 )
-from html2text import HTML2Text
 from urllib.parse import quote_plus
 from werkzeug.exceptions import HTTPException
 
 import math
 import os
-import requests
-import time
 
 ES_INDEX = "bookmarks"
 
 PAGE_SIZE = 20
-
-MAX_CONTENT_FIELD_LEN = 1000000
-
-# some websites (eg, rpg.net) block 'requests'
-FAKE_USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0"
-)
 
 BASE_URI = os.getenv("BASE_URI", "http://bookmarks.nyarlathotep")
 
@@ -40,15 +31,6 @@ app = Flask(__name__)
 app.jinja_env.filters["quote_plus"] = lambda u: quote_plus(u)
 
 es = Elasticsearch([os.getenv("ES_HOST", "http://localhost:9200")])
-
-
-def sanitize(html):
-    h = HTML2Text()
-    h.ignore_links = True
-    h.ignore_images = True
-    h.ignore_emphasis = True
-    h.ignore_tables = True
-    return h.handle(html)
 
 
 def transform_hit(hit, highlight=False):
@@ -253,41 +235,12 @@ def bookmark_controller(**kwargs):
         tags = getlist_field(request, "tag")
         content = get_field(request, "content")
 
-        if not titles:
+        result = index_collection(
+            titles, urls, tags=tags, collection_title=collection_title, content=content,
+        )
+
+        if result is None:
             abort(400)
-
-        if len(titles) != len(urls):
-            abort(400)
-
-        if len(titles) > 1:
-            if collection_title:
-                titles.insert(0, collection_title)
-            else:
-                abort(400)
-
-        if not content:
-            for u in urls:
-                if len(content) >= MAX_CONTENT_FIELD_LEN:
-                    break
-                r = requests.get(u, headers={"User-Agent": FAKE_USER_AGENT})
-                if r.status_code in [429, 503, 504]:
-                    time.sleep(10)
-                    r = requests.get(u, headers={"User-Agent": FAKE_USER_AGENT})
-                    if r.status_code in [429, 503, 504] and content:
-                        # just skip this URL if we've already fetched
-                        # some prior parts
-                        continue
-                r.raise_for_status()
-                content += sanitize(r.text)
-        content = content[0:MAX_CONTENT_FIELD_LEN]
-
-        result = {
-            "title": titles if len(titles) > 1 else titles[0],
-            "url": urls if len(urls) > 1 else urls[0],
-            "tag": sorted([t.lower() for t in tags]),
-            "indexed_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            "content": content,
-        }
 
         code = 201
         try:
