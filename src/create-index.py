@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from common import es_presenter
+
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import RequestError
 
@@ -44,7 +46,7 @@ if len(sys.argv) == 2:
         errors = []
         for doc_id, doc in dump.items():
             try:
-                es.create(index=ES_INDEX, id=doc_id, body=doc)
+                es.create(index=ES_INDEX, id=doc_id, body=es_presenter(doc))
                 ok += 1
             except Exception as e:
                 errors.append(f"could not index {doc_id}: {e}")

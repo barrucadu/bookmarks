@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 from indexer import index_collection
+from common import es_presenter, result_presenter
 
-from datetime import datetime
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConflictError, ConnectionError, NotFoundError
 from flask import (
@@ -28,47 +28,10 @@ BASE_URI = os.getenv("BASE_URI", "http://bookmarks.nyarlathotep")
 
 ALLOW_WRITES = os.getenv("ALLOW_WRITES", "0") == "1"
 
-RESULT_FIELDS = ["title", "url", "tag", "indexed_at"]
-
 app = Flask(__name__)
 app.jinja_env.filters["quote_plus"] = lambda u: quote_plus(u)
 
 es = Elasticsearch([os.getenv("ES_HOST", "http://localhost:9200")])
-
-
-def transform_hit(hit, highlight=False):
-    out = {k: v for k, v in hit["_source"].items() if k in RESULT_FIELDS}
-
-    primary_url = out["url"]
-    if type(out["url"]) is list:
-        primary_url = out["url"][0]
-        out["parts"] = [
-            {"url": out["url"][i], "title": out["title"][i + 1]}
-            for i in range(len(out["url"]))
-        ]
-        out["title"] = out["title"][0]
-        del out["url"]
-
-    try:
-        out["domain"] = primary_url.split("/")[2]
-    except IndexError:
-        out["domain"] = primary_url
-
-    if highlight:
-        try:
-            fragment = hit["highlight"]["content"][0]
-            if fragment:
-                unhighlighted_fragment = fragment.replace("<mark>", "").replace(
-                    "</mark>", ""
-                )
-                if not hit["_source"]["content"].startswith(unhighlighted_fragment):
-                    fragment = "…" + fragment
-                if not hit["_source"]["content"].endswith(unhighlighted_fragment):
-                    fragment += "…"
-                out["fragment"] = fragment
-        except KeyError:
-            pass
-    return out
 
 
 def all_tags():
@@ -119,7 +82,9 @@ def do_search(request_args, highlight=False):
         "tags": {
             d["key"]: d["doc_count"] for d in results["aggregations"]["tags"]["buckets"]
         },
-        "results": [transform_hit(hit, highlight) for hit in results["hits"]["hits"]],
+        "results": [
+            result_presenter(hit, highlight) for hit in results["hits"]["hits"]
+        ],
         "count": count,
         "page": page + 1,
         "pages": math.ceil(count / PAGE_SIZE),
@@ -253,32 +218,27 @@ def bookmark_controller(**kwargs):
         if not content:
             content = index_collection(urls)
 
-        result = {
-            "title": titles if len(titles) > 1 else titles[0],
-            "title_sort": titles[0],
-            "url": urls if len(urls) > 1 else urls[0],
-            "tag": sorted([t.lower() for t in tags]),
-            "indexed_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            "content": content,
-        }
+        doc = es_presenter(
+            {"title": titles, "url": urls, "tag": tags, "content": content}
+        )
 
         code = 201
         try:
-            es.create(index=ES_INDEX, id=url, body=result)
+            es.create(index=ES_INDEX, id=url, body=doc)
         except ConflictError:
-            es.update(index=ES_INDEX, id=url, body={"doc": result})
+            es.update(index=ES_INDEX, id=url, body={"doc": doc})
             code = 200
         if accepts_html(request):
             return (
                 render_template(
                     "post-add.html",
                     base_uri=BASE_URI,
-                    result=transform_hit({"_source": result}),
+                    result=result_presenter({"_source": doc}),
                 ),
                 code,
             )
         else:
-            return jsonify(result), code
+            return jsonify(result_presenter({"_source": doc})), code
     elif request.method == "DELETE":
         if not ALLOW_WRITES:
             abort(403)
@@ -314,20 +274,18 @@ def bookmark_reindex(**kwargs):
         doc = result["_source"]
 
         if accepts_json(request):
-            urls = doc["url"]
-            if not type(urls) is list:
-                urls = [urls]
-
-            content = get_field(request, "content")
-            if not content:
-                content = index_collection(urls)
-            if not content:
+            doc["content"] = get_field(request, "content")
+            if not doc["content"]:
+                urls = doc["url"]
+                if not type(urls) is list:
+                    urls = [urls]
+                doc["content"] = index_collection(urls)
+            if not doc["content"]:
                 abort(500)
 
-            doc["content"] = content
-            doc["indexed_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
-            es.update(index=ES_INDEX, id=url, body={"doc": doc})
+            es.update(
+                index=ES_INDEX, id=url, body={"doc": es_presenter(doc, reindex=True)}
+            )
             return jsonify(result)
         else:
             abort(406)
