@@ -10,6 +10,9 @@ mappings:
     url:
       type: keyword
 
+    domain:
+      type: keyword
+
     tag:
       type: keyword
 
