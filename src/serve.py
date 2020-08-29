@@ -62,7 +62,10 @@ def do_search(request_args, highlight=False):
 
     body = {
         "query": {"bool": {"must": [query]}},
-        "aggs": {"tags": {"terms": {"field": "tag", "size": 500}}},
+        "aggs": {
+            "tags": {"terms": {"field": "tag", "size": 500}},
+            "domains": {"terms": {"field": "domain", "size": 500}},
+        },
         "from": page * PAGE_SIZE,
         "size": PAGE_SIZE,
         "sort": ["_score", "title_sort"],
@@ -81,6 +84,10 @@ def do_search(request_args, highlight=False):
     return {
         "tags": {
             d["key"]: d["doc_count"] for d in results["aggregations"]["tags"]["buckets"]
+        },
+        "domains": {
+            d["key"]: d["doc_count"]
+            for d in results["aggregations"]["domains"]["buckets"]
         },
         "results": [
             result_presenter(hit, highlight) for hit in results["hits"]["hits"]
