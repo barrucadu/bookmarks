@@ -85,6 +85,10 @@ def reasonablypolymorphic_scraper(soup):
     return soup.find(class_="content").text
 
 
+def reddit_scraper(json):
+    return json[0]["data"]["children"][0]["data"]["selftext"]
+
+
 def regehr_scraper(entry_id, soup):
     return soup.find(id=f"post-{entry_id}").text
 
@@ -122,6 +126,10 @@ def scrape_page_content(url):
             return govuk_scraper(url.split("https://www.gov.uk")[1])
         if url.startswith("https://reasonablypolymorphic.com/blog/"):
             return reasonablypolymorphic_scraper(download_page_html(url))
+        if url.startswith("https://www.reddit.com/r/") or url.startswith(
+            "https://old.reddit.com/r/"
+        ):
+            return reddit_scraper(download_page_json(url + "/.json"))
         if url.startswith("https://blog.regehr.org/archives/"):
             return regehr_scraper(url.split("/")[4], download_page_html(url))
         if url.startswith("https://en.wikipedia.org/wiki/"):
