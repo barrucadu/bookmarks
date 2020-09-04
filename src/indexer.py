@@ -5,10 +5,13 @@ from bs4 import BeautifulSoup
 import googleapiclient.discovery
 import googleapiclient.errors
 
+import functools
 import os
 import requests
 import sys
 import time
+
+PATTERNS = {}
 
 TIMEOUT_BACKOFF_SECONDS = 10
 
@@ -42,19 +45,46 @@ def download_page_json(url, **kwargs):
     return requests_get(url, **kwargs).json()
 
 
-def default_scraper(soup):
+def default_scraper(url, soup=None):
+    if soup is None:
+        soup = download_page_html(url)
     return soup.text
 
 
-def alexandrian_scraper(entry_id, soup):
+def scraper(html, patterns):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(url):
+            if html:
+                soup = download_page_html(url)
+            try:
+                return func(url, soup) if html else func(url)
+            except Exception as e:
+                print(
+                    f"falling back to html scraping for '{url}': {e}", file=sys.stderr
+                )
+                return default_scraper(url, soup=soup)
+
+        for pattern in patterns:
+            PATTERNS[pattern] = wrapper
+        return wrapper
+
+    return decorator
+
+
+@scraper(html=True, patterns=["https://thealexandrian.net/wordpress/"])
+def alexandrian_scraper(url, soup):
+    entry_id = url.split("/")[4]
     return soup.find(id=f"post-{entry_id}").text
 
 
-def angrygm_scraper(soup):
+@scraper(html=True, patterns=["https://theangrygm.com/"])
+def angrygm_scraper(url, soup):
     return soup.find_all("article")[0].text
 
 
-def artofmanliness_scraper(soup):
+@scraper(html=True, patterns=["https://www.artofmanliness.com/articles/"])
+def artofmanliness_scraper(url, soup):
     header = soup.find_all(class_="post-title")[0]
     body = soup.find_all(class_="post-content-column")[0]
     for el in body.find_all("div"):
@@ -62,11 +92,14 @@ def artofmanliness_scraper(soup):
     return header.text + "\n" + body.text
 
 
-def goblinpunch_scraper(soup):
+@scraper(html=True, patterns=["http://goblinpunch.blogspot.com/"])
+def goblinpunch_scraper(url, soup):
     return soup.find(class_="post-body").text
 
 
-def govuk_scraper(path):
+@scraper(html=False, patterns=["https://www.gov.uk/"])
+def govuk_scraper(url):
+    path = url.split("https://www.gov.uk")[1]
     try:
         search_data = download_page_json(
             "https://www.gov.uk/api/search.json",
@@ -75,33 +108,44 @@ def govuk_scraper(path):
         result = search_data["results"][0]
         return result["title"] + "\n" + result["indexable_content"]
     except Exception as e:
-        print(f"falling back to content-api: {e}")
+        print(f"falling back to content-api for '{url}': {e}", file=sys.stderr)
         content_data = download_page_json(f"https://www.gov.uk/api/content{path}")
         body = content_data["details"]["body"]
         return BeautifulSoup(body, "html.parser").text
 
 
-def owasp_cheatsheets_scraper(soup):
+@scraper(html=True, patterns=["https://cheatsheetseries.owasp.org/cheatsheets/"])
+def owasp_cheatsheets_scraper(url, soup):
     return soup.find_all("article")[0].text
 
 
-def reasonablypolymorphic_scraper(soup):
+@scraper(html=True, patterns=["https://reasonablypolymorphic.com/blog/"])
+def reasonablypolymorphic_scraper(url, soup):
     return soup.find(class_="content").text
 
 
-def reddit_scraper(json):
+@scraper(
+    html=False, patterns=["https://www.reddit.com/r/", "https://old.reddit.com/r/"]
+)
+def reddit_scraper(url):
+    json = download_page_json(url + "/.json")
     return json[0]["data"]["children"][0]["data"]["selftext"]
 
 
-def regehr_scraper(entry_id, soup):
+@scraper(html=True, patterns=["https://blog.regehr.org/archives/"])
+def regehr_scraper(url, soup):
+    entry_id = url.split("/")[4]
     return soup.find(id=f"post-{entry_id}").text
 
 
-def wikipedia_scraper(soup):
+@scraper(html=True, patterns=["https://en.wikipedia.org/wiki/"])
+def wikipedia_scraper(url, soup):
     return soup.find(id="content").text
 
 
-def youtube_scraper(video_id):
+@scraper(html=False, patterns=["https://www.youtube.com/watch?v="])
+def youtube_scraper(url):
+    video_id = url.split("v=")[1].split("&")[0]
     youtube = googleapiclient.discovery.build(
         "youtube", "v3", developerKey=YOUTUBE_API_KEY
     )
@@ -117,34 +161,10 @@ def youtube_scraper(video_id):
 
 
 def scrape_page_content(url):
-    try:
-        if url.startswith("https://thealexandrian.net/wordpress/"):
-            return alexandrian_scraper(url.split("/")[4], download_page_html(url))
-        if url.startswith("https://theangrygm.com/"):
-            return angrygm_scraper(download_page_html(url))
-        if url.startswith("https://www.artofmanliness.com/articles/"):
-            return artofmanliness_scraper(download_page_html(url))
-        if url.startswith("http://goblinpunch.blogspot.com/"):
-            return goblinpunch_scraper(download_page_html(url))
-        if url.startswith("https://www.gov.uk/"):
-            return govuk_scraper(url.split("https://www.gov.uk")[1])
-        if url.startswith("https://cheatsheetseries.owasp.org/cheatsheets/"):
-            return owasp_cheatsheets_scraper(download_page_html(url))
-        if url.startswith("https://reasonablypolymorphic.com/blog/"):
-            return reasonablypolymorphic_scraper(download_page_html(url))
-        if url.startswith("https://www.reddit.com/r/") or url.startswith(
-            "https://old.reddit.com/r/"
-        ):
-            return reddit_scraper(download_page_json(url + "/.json"))
-        if url.startswith("https://blog.regehr.org/archives/"):
-            return regehr_scraper(url.split("/")[4], download_page_html(url))
-        if url.startswith("https://en.wikipedia.org/wiki/"):
-            return wikipedia_scraper(download_page_html(url))
-        if url.startswith("https://www.youtube.com/watch?v="):
-            return youtube_scraper(url.split("v=")[1].split("&")[0])
-    except Exception as e:
-        print(f"falling back to html scraping: {e}")
-        return default_scraper(download_page_html(url))
+    for pattern, scraper in PATTERNS.items():
+        if url.startswith(pattern):
+            return scraper(url)
+    return default_scraper(url)
 
 
 def index_collection(urls):
