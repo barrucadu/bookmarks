@@ -81,6 +81,10 @@ def govuk_scraper(path):
         return BeautifulSoup(body, "html.parser").text
 
 
+def owasp_cheatsheets_scraper(soup):
+    return soup.find_all("article")[0].text
+
+
 def reasonablypolymorphic_scraper(soup):
     return soup.find(class_="content").text
 
@@ -124,6 +128,8 @@ def scrape_page_content(url):
             return goblinpunch_scraper(download_page_html(url))
         if url.startswith("https://www.gov.uk/"):
             return govuk_scraper(url.split("https://www.gov.uk")[1])
+        if url.startswith("https://cheatsheetseries.owasp.org/cheatsheets/"):
+            return owasp_cheatsheets_scraper(download_page_html(url))
         if url.startswith("https://reasonablypolymorphic.com/blog/"):
             return reasonablypolymorphic_scraper(download_page_html(url))
         if url.startswith("https://www.reddit.com/r/") or url.startswith(
