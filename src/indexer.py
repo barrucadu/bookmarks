@@ -92,17 +92,28 @@ def artofmanliness_scraper(url, soup):
     return header.text + "\n" + body.text
 
 
-@scraper(html=True, patterns=["http://www.indie-rpgs.com/articles/"])
+@scraper(html=True, patterns=["http://www.indie-rpgs.com/"])
 def forge_scraper(url, soup):
-    title = soup.find_all(class_="maintitle")[1]
-    body = soup.find_all(class_="gen")[2]
-    nav_prev = body.find("td", align="left")
-    nav_next = body.find("td", align="right")
-    if nav_prev:
-        nav_prev.clear()
-    if nav_next:
-        nav_next.clear()
-    return title.text + "\n" + body.text.replace("\r", "\n")
+    # forge has two different templates!
+    body = soup.find(id="content")
+    if body:
+        attribution = body.find(id="attribution")
+        footer = body.find(id="footer")
+        if attribution:
+            attribution.clear()
+        if footer:
+            footer.clear()
+        return body.text
+    else:
+        title = soup.find_all(class_="maintitle")[1]
+        body = soup.find_all(class_="gen")[2]
+        nav_prev = body.find("td", align="left")
+        nav_next = body.find("td", align="right")
+        if nav_prev:
+            nav_prev.clear()
+        if nav_next:
+            nav_next.clear()
+        return title.text + "\n" + body.text.replace("\r", "\n")
 
 
 @scraper(html=True, patterns=["http://goblinpunch.blogspot.com/"])
