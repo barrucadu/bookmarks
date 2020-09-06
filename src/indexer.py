@@ -92,6 +92,19 @@ def artofmanliness_scraper(url, soup):
     return header.text + "\n" + body.text
 
 
+@scraper(html=True, patterns=["http://indie-rpgs.com/articles/"])
+def forge_scraper(url, soup):
+    title = soup.find_all(class_="maintitle")[1]
+    body = soup.find_all(class_="gen")[2]
+    nav_prev = body.find("td", align="left")
+    nav_next = body.find("td", align="right")
+    if nav_prev:
+        nav_prev.clear()
+    if nav_next:
+        nav_next.clear()
+    return title.text + "\n" + body.text.replace("\r", "\n")
+
+
 @scraper(html=True, patterns=["http://goblinpunch.blogspot.com/"])
 def goblinpunch_scraper(url, soup):
     return soup.find(class_="post-body").text
