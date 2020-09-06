@@ -140,7 +140,18 @@ def regehr_scraper(url, soup):
 
 @scraper(html=True, patterns=["https://en.wikipedia.org/wiki/"])
 def wikipedia_scraper(url, soup):
-    return soup.find(id="content").text
+    title = soup.find(id="firstHeading")
+    body = soup.find(id="mw-content-text")
+    for el, class_ in [
+        ("div", "toc"),
+        ("table", "metadata"),
+        ("table", "vertical-navbox"),
+        ("span", "mw-editsection"),
+        ("div", "printfooter"),
+    ]:
+        for el in body.find_all(el, class_=class_):
+            el.clear()
+    return title.text + "\n" + body.text
 
 
 @scraper(html=False, patterns=["https://www.youtube.com/watch?v="])
