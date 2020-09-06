@@ -92,7 +92,7 @@ def artofmanliness_scraper(url, soup):
     return header.text + "\n" + body.text
 
 
-@scraper(html=True, patterns=["http://indie-rpgs.com/articles/"])
+@scraper(html=True, patterns=["http://www.indie-rpgs.com/articles/"])
 def forge_scraper(url, soup):
     title = soup.find_all(class_="maintitle")[1]
     body = soup.find_all(class_="gen")[2]
@@ -137,9 +137,7 @@ def reasonablypolymorphic_scraper(url, soup):
     return soup.find(class_="content").text
 
 
-@scraper(
-    html=False, patterns=["https://www.reddit.com/r/", "https://old.reddit.com/r/"]
-)
+@scraper(html=False, patterns=["https://www.reddit.com/r/"])
 def reddit_scraper(url):
     json = download_page_json(url + "/.json")
     return json[0]["data"]["children"][0]["data"]["selftext"]
@@ -202,10 +200,20 @@ def index_collection(urls):
     return content[0:MAX_CONTENT_FIELD_LEN]
 
 
+def normalise_url(url):
+    for prefix, replacement in [
+        ("http://indie-rpgs.com/", "http://www.indie-rpgs.com/"),
+        ("https://old.reddit.com/r/", "https://www.reddit.com/r/"),
+    ]:
+        if url.startswith(prefix):
+            return replacement + url.split(prefix)[1]
+    return url
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(f"USAGE: {sys.argv[0]} <url>...")
         sys.exit(1)
 
-    urls = sys.argv[1:]
+    urls = [normalise_url(url) for url in sys.argv[1:]]
     print(index_collection(urls))

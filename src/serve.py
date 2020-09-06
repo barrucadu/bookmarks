@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from indexer import index_collection
+from indexer import index_collection, normalise_url
 from common import es_presenter, result_presenter
 
 from elasticsearch import Elasticsearch
@@ -104,18 +104,37 @@ def do_search(q, page="1", highlight=False, raw=False, fetch_all=False):
     }
 
 
+def insert_document(doc, reindex=False):
+    es_doc = es_presenter(doc, reindex=reindex)
+    try:
+        es.create(index=ES_INDEX, id=doc["url"][0], body=es_doc)
+        return ("create", es_doc)
+    except ConflictError:
+        es.update(index=ES_INDEX, id=doc["url"][0], body={"doc": es_doc})
+        return ("update", es_doc)
+
+
 def reindex_result(result, content=None):
     doc = result["_source"]
     urls = doc["url"]
     if not type(urls) is list:
         urls = [urls]
 
+    old_primary_url = urls[0]
+    urls = [normalise_url(url) for url in urls]
+    new_primary_url = urls[0]
+
+    doc["url"] = urls
     doc["content"] = content if content else index_collection(urls)
 
     if not doc["content"]:
         return False
 
-    es.update(index=ES_INDEX, id=urls[0], body={"doc": es_presenter(doc, reindex=True)})
+    if old_primary_url != new_primary_url:
+        es.delete(index=ES_INDEX, id=old_primary_url)
+
+    insert_document(doc, reindex=True)
+
     return True
 
 
@@ -242,7 +261,7 @@ def bookmark_controller(**kwargs):
 
         collection_title = get_field(request, "collection-title")
         titles = getlist_field(request, "title")
-        urls = getlist_field(request, "url")
+        urls = [normalise_url(url) for url in getlist_field(request, "url")]
         tags = getlist_field(request, "tag")
         content = get_field(request, "content")
 
@@ -261,27 +280,20 @@ def bookmark_controller(**kwargs):
         if not content:
             content = index_collection(urls)
 
-        doc = es_presenter(
-            {"title": titles, "url": urls, "tag": tags, "content": content}
-        )
-
-        code = 201
-        try:
-            es.create(index=ES_INDEX, id=url, body=doc)
-        except ConflictError:
-            es.update(index=ES_INDEX, id=url, body={"doc": doc})
-            code = 200
+        doc = {"title": titles, "url": urls, "tag": tags, "content": content}
+        action, es_doc = insert_document(doc)
+        code = 201 if action == "create" else 200
         if accepts_html(request):
             return (
                 render_template(
                     "post-add.html",
                     base_uri=BASE_URI,
-                    result=result_presenter({"_source": doc}),
+                    result=result_presenter({"_source": es_doc}),
                 ),
                 code,
             )
         else:
-            return jsonify(result_presenter({"_source": doc})), code
+            return jsonify(result_presenter({"_source": es_doc})), code
     elif request.method == "DELETE":
         if not ALLOW_WRITES:
             abort(403)
