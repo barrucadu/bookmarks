@@ -48,15 +48,14 @@ def all_tags():
     }
 
 
-def do_search(request_args, highlight=False):
-    q = request_args.get("q", "")
+def do_search(q, page="1", highlight=False, raw=False, fetch_all=False):
     if q:
         query = {"query_string": {"query": q, "default_field": "content"}}
     else:
         query = {"match_all": {}}
 
     try:
-        page = int(request_args.get("page")) - 1
+        page = int(page) - 1
     except Exception:
         page = 0
 
@@ -66,8 +65,6 @@ def do_search(request_args, highlight=False):
             "tags": {"terms": {"field": "tag", "size": 500}},
             "domains": {"terms": {"field": "domain", "size": 500}},
         },
-        "from": page * PAGE_SIZE,
-        "size": PAGE_SIZE,
         "sort": ["_score", "title_sort"],
     }
     if highlight:
@@ -77,8 +74,16 @@ def do_search(request_args, highlight=False):
             "pre_tags": "<mark>",
             "post_tags": "</mark>",
         }
+    if fetch_all:
+        body["size"] = 1000
+    else:
+        body["from"] = page * PAGE_SIZE
+        body["size"] = PAGE_SIZE
 
     results = es.search(index=ES_INDEX, body=body)
+
+    if raw:
+        return results["hits"]["hits"]
 
     count = results["hits"]["total"]["value"]
     return {
@@ -97,6 +102,21 @@ def do_search(request_args, highlight=False):
         "pages": math.ceil(count / PAGE_SIZE),
         "q": q,
     }
+
+
+def reindex_result(result, content=None):
+    doc = result["_source"]
+    urls = doc["url"]
+    if not type(urls) is list:
+        urls = [urls]
+
+    doc["content"] = content if content else index_collection(urls)
+
+    if not doc["content"]:
+        return False
+
+    es.update(index=ES_INDEX, id=urls[0], body={"doc": es_presenter(doc, reindex=True)})
+    return True
 
 
 ###############################################################################
@@ -155,7 +175,9 @@ def search(**kwargs):
         abort(406)
 
     if accepts_html(request):
-        results = do_search(request.args, highlight=True)
+        results = do_search(
+            get_field(request, "q"), page=get_field(request, "page"), highlight=True
+        )
         restricting_tags = sorted(
             [
                 (count, name)
@@ -172,8 +194,22 @@ def search(**kwargs):
             **results,
         )
     else:
-        results = do_search(request.args)
+        results = do_search(get_field(request, "q"), page=get_field(request, "page"))
         return jsonify(results)
+
+
+@app.route("/search/reindex", methods=["POST"])
+@app.route("/search/reindex.<fmt>", methods=["POST"])
+def search_reindex(**kwargs):
+    if not ALLOW_WRITES:
+        abort(403)
+
+    results = do_search(get_field(request, "q"), raw=True, fetch_all=True)
+    for result in results:
+        if not reindex_result(result):
+            abort(500)
+
+    return jsonify(results)
 
 
 @app.route("/add")
@@ -278,21 +314,9 @@ def bookmark_reindex(**kwargs):
 
     try:
         result = es.get(index=ES_INDEX, id=url)
-        doc = result["_source"]
-
         if accepts_json(request):
-            doc["content"] = get_field(request, "content")
-            if not doc["content"]:
-                urls = doc["url"]
-                if not type(urls) is list:
-                    urls = [urls]
-                doc["content"] = index_collection(urls)
-            if not doc["content"]:
+            if not reindex_result(result, content=get_field(request, "content")):
                 abort(500)
-
-            es.update(
-                index=ES_INDEX, id=url, body={"doc": es_presenter(doc, reindex=True)}
-            )
             return jsonify(result)
         else:
             abort(406)
