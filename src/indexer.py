@@ -206,7 +206,7 @@ def index_collection(urls):
     for u in urls:
         if len(content) >= MAX_CONTENT_FIELD_LEN:
             break
-        content += ("\n" + (scrape_page_content(u) or "")).strip()
+        content = (content + "\n" + (scrape_page_content(u) or "")).strip()
 
     return content[0:MAX_CONTENT_FIELD_LEN]
 
