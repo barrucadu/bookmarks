@@ -160,6 +160,15 @@ def regehr_scraper(url, soup):
     return soup.find(id=f"post-{entry_id}").text
 
 
+@scraper(html=True, patterns=["https://scotthelme.co.uk/"])
+def scotthelme_scraper(url, soup):
+    title = soup.find(class_="post-full-title").text
+    # there's no whitespace between paragraphs, so insert to prevent
+    # merging words
+    body = "\n".join(p.text for p in soup.find(class_="post-content").find_all("p"))
+    return title + "\n" + body
+
+
 @scraper(html=True, patterns=["https://en.wikipedia.org/wiki/"])
 def wikipedia_scraper(url, soup):
     title = soup.find(id="firstHeading")
