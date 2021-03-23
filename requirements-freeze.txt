@@ -6,7 +6,7 @@ click==7.1.2
 elasticsearch==7.9.1
 Flask==1.1.2
 google-api-core==1.22.1
-google-api-python-client==1.11.0
+google-api-python-client==2.0.2
 google-auth==1.21.0
 google-auth-httplib2==0.0.4
 google-auth-oauthlib==0.4.1
