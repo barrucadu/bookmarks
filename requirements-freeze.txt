@@ -3,7 +3,7 @@ cachetools==4.2.1
 certifi==2020.12.5
 chardet==4.0.0
 click==7.1.2
-elasticsearch==7.9.1
+elasticsearch==7.12.0
 Flask==1.1.2
 google-api-core==1.26.1
 google-api-python-client==2.0.2
