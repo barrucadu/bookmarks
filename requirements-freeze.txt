@@ -14,7 +14,7 @@ googleapis-common-protos==1.53.0
 gunicorn==20.1.0
 httplib2==0.19.1
 idna==2.10
-itsdangerous==1.1.0
+itsdangerous==2.0.0
 Jinja2==2.11.3
 MarkupSafe==1.1.1
 oauthlib==3.1.0
