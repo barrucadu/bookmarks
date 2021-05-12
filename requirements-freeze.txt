@@ -2,7 +2,7 @@ beautifulsoup4==4.9.3
 cachetools==4.2.2
 certifi==2020.12.5
 chardet==4.0.0
-click==7.1.2
+click==8.0.0
 elasticsearch==7.12.1
 Flask==1.1.2
 google-api-core==1.26.3
