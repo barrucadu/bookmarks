@@ -15,7 +15,7 @@ gunicorn==20.1.0
 httplib2==0.19.1
 idna==2.10
 itsdangerous==2.0.0
-Jinja2==2.11.3
+Jinja2==3.0.0
 MarkupSafe==2.0.0
 oauthlib==3.1.0
 protobuf==3.16.0
