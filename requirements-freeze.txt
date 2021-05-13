@@ -18,7 +18,7 @@ itsdangerous==2.0.0
 Jinja2==3.0.0
 MarkupSafe==2.0.0
 oauthlib==3.1.0
-protobuf==3.16.0
+protobuf==3.17.0
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pytz==2021.1
