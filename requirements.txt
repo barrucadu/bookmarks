@@ -1,5 +1,5 @@
 beautifulsoup4
-elasticsearch>=7.0.0,<8.0.0
+elasticsearch>=7.0.0,<9.0.0
 flask
 google-api-python-client
 google-auth-httplib2
