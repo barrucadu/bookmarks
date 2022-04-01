@@ -20,12 +20,12 @@ except FileNotFoundError:
 
 es = Elasticsearch([os.getenv("ES_HOST", "http://localhost:9200")])
 try:
-    es.indices.create(index=ES_INDEX, body=es_config)
+    es.indices.create(index=ES_INDEX, **es_config)
 except RequestError:
     if os.getenv("DELETE_EXISTING_INDEX", "0") == "1":
         print("Index already exists - recreating it...")
         es.indices.delete(index=ES_INDEX)
-        es.indices.create(index=ES_INDEX, body=es_config)
+        es.indices.create(index=ES_INDEX, **es_config)
     else:
         print("Index already exists - set DELETE_EXISTING_INDEX=1 to recreate it")
         sys.exit(2)
@@ -46,7 +46,7 @@ if len(sys.argv) == 2:
         errors = []
         for doc_id, doc in dump.items():
             try:
-                es.create(index=ES_INDEX, id=doc_id, body=es_presenter(doc))
+                es.create(index=ES_INDEX, id=doc_id, **es_presenter(doc))
                 ok += 1
             except Exception as e:
                 errors.append(f"could not index {doc_id}: {e}")
