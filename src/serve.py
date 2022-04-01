@@ -37,10 +37,8 @@ es = Elasticsearch([os.getenv("ES_HOST", "http://localhost:9200")])
 def all_tags():
     results = es.search(
         index=ES_INDEX,
-        body={
-            "query": {"bool": {"must": [{"match_all": {}}]}},
-            "aggs": {"tags": {"terms": {"field": "tag", "size": 500}}},
-        },
+        query={"bool": {"must": [{"match_all": {}}]}},
+        aggs={"tags": {"terms": {"field": "tag", "size": 500}}},
     )
 
     return {
@@ -80,7 +78,7 @@ def do_search(q, page="1", highlight=False, raw=False, fetch_all=False):
         body["from"] = page * PAGE_SIZE
         body["size"] = PAGE_SIZE
 
-    results = es.search(index=ES_INDEX, body=body)
+    results = es.search(index=ES_INDEX, **body)
 
     if raw:
         return results["hits"]["hits"]
@@ -107,10 +105,10 @@ def do_search(q, page="1", highlight=False, raw=False, fetch_all=False):
 def insert_document(doc, reindex=False):
     es_doc = es_presenter(doc, reindex=reindex)
     try:
-        es.create(index=ES_INDEX, id=doc["url"][0], body=es_doc)
+        es.create(index=ES_INDEX, id=doc["url"][0], **es_doc)
         return ("create", es_doc)
     except ConflictError:
-        es.update(index=ES_INDEX, id=doc["url"][0], body={"doc": es_doc})
+        es.update(index=ES_INDEX, id=doc["url"][0], **es_doc)
         return ("update", es_doc)
 
 
