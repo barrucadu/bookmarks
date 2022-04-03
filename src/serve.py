@@ -105,10 +105,10 @@ def do_search(q, page="1", highlight=False, raw=False, fetch_all=False):
 def insert_document(doc, reindex=False):
     es_doc = es_presenter(doc, reindex=reindex)
     try:
-        es.create(index=ES_INDEX, id=doc["url"][0], **es_doc)
+        es.create(index=ES_INDEX, id=doc["url"][0], document=es_doc)
         return ("create", es_doc)
     except ConflictError:
-        es.update(index=ES_INDEX, id=doc["url"][0], **es_doc)
+        es.update(index=ES_INDEX, id=doc["url"][0], doc=es_doc)
         return ("update", es_doc)
 
 
