@@ -46,7 +46,7 @@ if len(sys.argv) == 2:
         errors = []
         for doc_id, doc in dump.items():
             try:
-                es.create(index=ES_INDEX, id=doc_id, **es_presenter(doc))
+                es.create(index=ES_INDEX, id=doc_id, document=es_presenter(doc))
                 ok += 1
             except Exception as e:
                 errors.append(f"could not index {doc_id}: {e}")
