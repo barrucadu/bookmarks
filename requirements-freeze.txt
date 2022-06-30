@@ -7,7 +7,7 @@ elasticsearch==8.3.1
 Flask==2.1.2
 google-api-core==2.8.2
 google-api-python-client==2.52.0
-google-auth==2.8.0
+google-auth==2.9.0
 google-auth-httplib2==0.1.0
 google-auth-oauthlib==0.5.2
 googleapis-common-protos==1.56.3
