@@ -1,0 +1,29 @@
+services:
+  bookmarks:
+    build: "."
+    environment:
+      - "ALLOW_WRITES=1"
+      - "BASE_URI=http://localhost:8888"
+      - "ES_HOST=http://elasticsearch:9200"
+    networks:
+      - "bookmarks"
+    ports:
+      - "127.0.0.1:8888:8888"
+
+  elasticsearch:
+    image: "elasticsearch:8.0.0"
+    environment:
+      - "ES_JAVA_OPTS=-Xms512M -Xmx512M"
+      - "discovery.type=single-node"
+      - "http.host=0.0.0.0"
+      - "xpack.security.enabled=false"
+    networks:
+      - "bookmarks"
+    volumes:
+      - "esdata:/usr/share/elasticsearch/data"
+
+networks:
+  bookmarks:
+
+volumes:
+  esdata:

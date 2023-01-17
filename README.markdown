@@ -5,14 +5,19 @@ A database and web app to keep track of my bookmarks, deployed to [bookmarks.bar
 
 ![screenshot](screenshot.png)
 
-## Build / deploy a new release on nyarlathotep
+## Running
 
+There's a docker-compose file provided, which will fire up a read-write instance
+of bookmarks accessible at `http://localhost:8888`:
+
+```bash
+docker-compose up
 ```
-docker build -t localhost:5000/bookmarks:latest .
-docker push localhost:5000/bookmarks:latest
-sudo systemctl restart bookmarks
+
+You will then need to create the search index:
+
+```bash
+docker-compose exec bookmarks /app/create-index.py
 ```
 
-## Build / deploy a new release on dunwich
-
-This is automatically triggered by a push to the GitHub repository.
+I run bookmarks [via nix](https://github.com/barrucadu/nixfiles/blob/master/shared/bookmarks/default.nix).
