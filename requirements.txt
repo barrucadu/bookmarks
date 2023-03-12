@@ -1,9 +1,0 @@
-beautifulsoup4
-elasticsearch>=7.0.0,<9.0.0
-flask
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
-gunicorn
-pyyaml
-requests
