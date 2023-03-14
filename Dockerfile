@@ -15,7 +15,6 @@ FROM base AS app
 ENV PATH="/app/.venv/bin:$PATH"
 ENV ELASTIC_CLIENT_APIVERSIONING=1
 COPY --chown=app bookmarks /app
-COPY --chown=app config /app/config
 COPY --from=poetry /app/.venv /app/.venv
 USER app
 
