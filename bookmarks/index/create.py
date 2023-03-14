@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-
-from common import es_presenter
+from bookmarks.common import es_presenter
 
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import RequestError
@@ -81,43 +79,49 @@ ES_CONFIG = {
     },
 }
 
-es = Elasticsearch([os.getenv("ES_HOST", "http://localhost:9200")])
-try:
-    es.indices.create(index=ES_INDEX, **ES_CONFIG)
-except RequestError:
-    if os.getenv("DELETE_EXISTING_INDEX", "0") == "1":
-        print("Index already exists - recreating it...")
-        es.indices.delete(index=ES_INDEX)
+
+def run():
+    es = Elasticsearch([os.getenv("ES_HOST", "http://localhost:9200")])
+    try:
         es.indices.create(index=ES_INDEX, **ES_CONFIG)
-    else:
-        print("Index already exists - set DELETE_EXISTING_INDEX=1 to recreate it")
-        sys.exit(2)
-
-if len(sys.argv) == 2:
-    try:
-        if sys.argv[1] == "-":
-            dump = yaml.safe_load(sys.stdin)
+    except RequestError:
+        if os.getenv("DELETE_EXISTING_INDEX", "0") == "1":
+            print("Index already exists - recreating it...")
+            es.indices.delete(index=ES_INDEX)
+            es.indices.create(index=ES_INDEX, **ES_CONFIG)
         else:
-            with open(sys.argv[1]) as f:
-                dump = yaml.safe_load(f)
-    except FileNotFoundError:
-        print(f"Could not open data file {sys.argv[1]}")
-        sys.exit(1)
+            print("Index already exists - set DELETE_EXISTING_INDEX=1 to recreate it")
+            sys.exit(2)
 
-    try:
-        ok = 0
-        errors = []
-        for doc_id, doc in dump.items():
-            try:
-                es.create(index=ES_INDEX, id=doc_id, document=es_presenter(doc))
-                ok += 1
-            except Exception as e:
-                errors.append(f"could not index {doc_id}: {e}")
-        print(f"Indexed {ok} records")
-        if errors:
-            print("")
-            for error in errors:
-                print(error)
-    except AttributeError:
-        print(f"Expected {sys.argv[1]} to be an object")
-        sys.exit(3)
+    if len(sys.argv) == 2:
+        try:
+            if sys.argv[1] == "-":
+                dump = yaml.safe_load(sys.stdin)
+            else:
+                with open(sys.argv[1]) as f:
+                    dump = yaml.safe_load(f)
+        except FileNotFoundError:
+            print(f"Could not open data file {sys.argv[1]}")
+            sys.exit(1)
+
+        try:
+            ok = 0
+            errors = []
+            for doc_id, doc in dump.items():
+                try:
+                    es.create(index=ES_INDEX, id=doc_id, document=es_presenter(doc))
+                    ok += 1
+                except Exception as e:
+                    errors.append(f"could not index {doc_id}: {e}")
+            print(f"Indexed {ok} records")
+            if errors:
+                print("")
+                for error in errors:
+                    print(error)
+        except AttributeError:
+            print(f"Expected {sys.argv[1]} to be an object")
+            sys.exit(3)
+
+
+if __name__ == "__main__":
+    run()

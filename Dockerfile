@@ -14,8 +14,8 @@ RUN poetry install
 FROM base AS app
 ENV PATH="/app/.venv/bin:$PATH"
 ENV ELASTIC_CLIENT_APIVERSIONING=1
-COPY --chown=app bookmarks /app
+COPY --chown=app bookmarks /app/bookmarks
 COPY --from=poetry /app/.venv /app/.venv
 USER app
 
-CMD ["gunicorn", "-w", "4", "-t", "60", "-b", "0.0.0.0:8888", "serve:app"]
+CMD ["gunicorn", "-w", "4", "-t", "60", "-b", "0.0.0.0:8888", "bookmarks.serve:app"]
