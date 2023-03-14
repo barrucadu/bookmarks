@@ -17,7 +17,7 @@ docker-compose up
 You will then need to create the search index:
 
 ```bash
-docker-compose exec bookmarks /app/create-index.py
+docker-compose exec bookmarks python -m bookmarks.index.create
 ```
 
 I run bookmarks [via nix](https://github.com/barrucadu/nixfiles/blob/master/shared/bookmarks/default.nix).
