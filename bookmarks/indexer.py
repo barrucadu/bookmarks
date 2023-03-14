@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from bs4 import BeautifulSoup
 
 import googleapiclient.discovery
@@ -230,10 +228,14 @@ def normalise_url(url):
     return url
 
 
-if __name__ == "__main__":
+def run():
     if len(sys.argv) < 2:
         print(f"USAGE: {sys.argv[0]} <url>...")
         sys.exit(1)
 
     urls = [normalise_url(url) for url in sys.argv[1:]]
     print(index_collection(urls))
+
+
+if __name__ == "__main__":
+    run()
