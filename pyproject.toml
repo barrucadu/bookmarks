@@ -8,7 +8,7 @@ license = "WTFPL"
 [tool.poetry.dependencies]
 python = "^3.9"
 beautifulsoup4 = "^4.12.2"
-elasticsearch = "^8.8.2"
+elasticsearch = "^8.9.0"
 Flask = "^2.3.2"
 google-api-python-client = "^2.96.0"
 google-auth-httplib2 = "^0.1.0"
