@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="author" content="Michael Walker">
+    <meta name="robots" content="NONE">
+
+    <title>Error {{ status_code }}</title>
+
+    <link rel="stylesheet" href="/resources/style.css" type="text/css">
+  </head>
+
+  <body>
+    <main>
+      <p>{{ message }}</p>
+      <p><a href="/search">Click here to return.</a></p>
+    </main>
+  </body>
+</html>
