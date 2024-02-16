@@ -22,6 +22,8 @@
       devShells.${system}.default = pkgs.mkShell {
         packages = [
           toolchain
+          pkgs.openssl
+          pkgs.pkg-config
         ];
       };
     };

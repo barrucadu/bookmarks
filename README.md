@@ -8,7 +8,7 @@ A database and web app to keep track of my bookmarks, deployed to
 Development
 -----------
 
-Install `rustup`, and then install the default toolchain:
+Install `rustup` and `openssl`, and then install the default toolchain:
 
 ```bash
 rustup show
