@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="author" content="Michael Walker">
+    <meta name="robots" content="NONE">
+
+    <title>Bookmarks</title>
+
+    <link rel="stylesheet" href="/resources/style.css" type="text/css">
+  </head>
+
+  <body>
+    <main>
+      {% if allow_writes %}
+      <nav class="page-navigation"><a href="/add">Submit a new link</a></nav>
+      {% endif %}
+
+      <form class="search-form">
+        <input type="text" class="search-form__input" name="q" value="{{ q }}">
+      </form>
+
+      <p class="result-count">
+        {{ total }} result{{ total|pluralize }}
+      </p>
+
+      {% if tags %}
+      <ul class="tags">
+        {% for tag in tags %}
+        <li class="tags__tag">
+          {% if loop.index0 < 25 %}
+          <a href="/search?q={% filter urlencode %}{% if q %}{{ q }} AND {% endif %}tag:{{ tag.1 }}{% endfilter %}">
+            <span class="tags__tag__count">{{ tag.0 }}</span><span class="tags__tag__name">{{ tag.1 }}</span>
+          </a>
+          {% elif loop.index0 == 25 %}
+          <span class="tags__tag__more">{{ tags|length - loop.index0 }} more tags omitted&hellip;</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if results %}
+      <ol class="results">
+        {% for result in results %}
+        <li class="results__result">
+          <h2 class="results__result__title">
+            {% if result.url %}
+            <a href="{{ result.url }}">{{ result.title }}</a>
+            {% else %}
+            {{ result.title }}
+            {% endif %}
+          </h2>
+
+          <p class="results__result__url">{{ result.domain }}</p>
+
+          {% if result.parts %}
+          <ol class="results__result__parts">
+            {% for part in result.parts %}
+            <li class="results__result__parts__part">
+              <a class="results__result__parts__part__link" href="{{ part.url }}">{{ part.title }}</a>
+            </li>
+            {% endfor %}
+          </ol>
+          {% endif %}
+
+          {% if result.fragment %}
+          <p class="results__result__fragment">{{ result.fragment|safe }}</p>
+          {% endif %}
+
+          {% if result.tag %}
+          <ul class="results__result__tags">
+            {% for tag in result.tag %}
+            <li class="results__result__tags__tag">
+              <a href="/search?q={% filter urlencode %}{% if q %}{{ q }} AND {% endif %}tag:{{ tag }}{% endfilter %}">
+                <span class="results__result__tags__tag__name">{{ tag }}</span>
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+      {% endif %}
+
+      {% if page > 1 %}
+      <div class="pagination">
+        <h2 class="pagination__link"><a href="/search?{% if q %}q={{ q|urlencode }}&amp;{% endif %}page={{ page - 1 }}">Previous page</a></h2>
+        <p class="pagination__info">Page {{ (page - 1) }} of {{ pages }}.</p>
+      </div>
+      {% endif %}
+
+      {% if page < pages %}
+      <div class="pagination">
+        <h2 class="pagination__link"><a href="/search?{% if q %}q={{ q|urlencode }}&amp;{% endif %}page={{ page + 1 }}">Next page</a></h2>
+        <p class="pagination__info">Page {{ (page + 1) }} of {{ pages }}.</p>
+      </div>
+      {% endif %}
+    </main>
+  </body>
+</html>

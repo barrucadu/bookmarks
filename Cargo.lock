@@ -370,6 +370,7 @@ dependencies = [
  "actix-web",
  "clap",
  "elasticsearch",
+ "lazy_static",
  "mime",
  "serde",
  "serde_json",
