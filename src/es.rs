@@ -166,9 +166,12 @@ pub struct SearchResult {
     pub pages: u64,
 }
 
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_sign_loss)]
 pub async fn search(
     client: &Elasticsearch,
-    query: &Option<&str>,
+    query: Option<&str>,
     page: u64,
 ) -> Result<SearchResult, Error> {
     let query = match query {

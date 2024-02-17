@@ -92,7 +92,7 @@ async fn get_search(
         .elasticsearch()
         .map_err(|_| error_cannot_connect_to_search_server())?;
 
-    let result = es::search(&client, &q, query.page.unwrap_or(1))
+    let result = es::search(&client, q, query.page.unwrap_or(1))
         .await
         .map_err(|_| error_cannot_connect_to_search_server())?;
 
@@ -135,7 +135,7 @@ fn present_result((record, fragment): (es::Record, Option<String>)) -> Value {
                 (false, false) => "…".to_string() + &s + "…",
             }
         }
-        None => "".to_string(),
+        None => String::new(),
     };
 
     let (url, parts) = if record.title.len() == 1 {
@@ -216,10 +216,10 @@ struct PutRecord {
 }
 
 async fn form_to_record(form: PutRecord) -> Result<es::Record, Error> {
-    let collection_title = multipart_str(form.collection_title);
-    let tag: Vec<_> = form.tag.into_iter().filter_map(multipart_str).collect();
-    let url: Vec<_> = form.url.into_iter().filter_map(multipart_str).collect();
-    let mut title: Vec<_> = form.title.into_iter().filter_map(multipart_str).collect();
+    let collection_title = multipart_str(&form.collection_title);
+    let tag: Vec<_> = form.tag.iter().filter_map(multipart_str).collect();
+    let url: Vec<_> = form.url.iter().filter_map(multipart_str).collect();
+    let mut title: Vec<_> = form.title.iter().filter_map(multipart_str).collect();
 
     if url.is_empty() || title.is_empty() {
         return Err(error_bad_request());
@@ -232,7 +232,7 @@ async fn form_to_record(form: PutRecord) -> Result<es::Record, Error> {
         title[0].clone()
     };
 
-    let content = if let Some(s) = multipart_str(form.content) {
+    let content = if let Some(s) = multipart_str(&form.content) {
         s
     } else {
         fetch_combined_url_contents(&url).await
@@ -254,7 +254,7 @@ async fn form_to_record(form: PutRecord) -> Result<es::Record, Error> {
     })
 }
 
-fn multipart_str(s: actix_multipart::form::text::Text<String>) -> Option<String> {
+fn multipart_str(s: &actix_multipart::form::text::Text<String>) -> Option<String> {
     if s.is_empty() {
         None
     } else {
