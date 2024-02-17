@@ -7,30 +7,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5.0.0
+
+      - name: Install rust
+        run: rustup show
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v25
         with:
-          python-version: '3.x'
-      - name: Setup
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Check flake.nix
         run: |
           set -ex
-          python -m pip install --upgrade pip
-          pip install flake8 black
-      - name: Lint
-        run: |
-          set -ex
-          flake8 --ignore=E266,E501,W503 bookmarks
-          black bookmarks
+          nix flake check
+          nix fmt
           git diff --exit-code
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Check clippy lints
+        run: cargo clippy --tests -- -Dwarnings
+
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5.0.0
-        with:
-          python-version: '3.x'
-      - uses: snok/install-poetry@v1
-      - name: Check Dependencies
-        run: |
-          set -ex
-          poetry install --no-interaction
-          poetry check
+
+      - name: Install rust
+        run: rustup show
+
+      - name: Run tests
+        run: cargo test

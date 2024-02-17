@@ -5,18 +5,15 @@
     <meta name="author" content="Michael Walker">
     <meta name="robots" content="NONE">
 
-    <base href="{{ base_uri|e }}">
+    <title>Error {{ status_code }}</title>
 
-    <title>{% block title %}Bookmarks{% endblock %}</title>
-
-    <link rel="stylesheet" href="static/style.css" type="text/css">
-    {% block head %}{% endblock %}
+    <link rel="stylesheet" href="/resources/style.css" type="text/css">
   </head>
 
   <body>
     <main>
-      {% block body %}
-      {% endblock %}
+      <p>{{ message }}</p>
+      <p><a href="/search">Click here to return.</a></p>
     </main>
   </body>
 </html>

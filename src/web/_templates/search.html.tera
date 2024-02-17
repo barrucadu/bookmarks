@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="author" content="Michael Walker">
+    <meta name="robots" content="NONE">
+
+    <title>Bookmarks</title>
+
+    <link rel="stylesheet" href="/resources/style.css" type="text/css">
+  </head>
+
+  <body>
+    <main>
+      {% if allow_writes %}
+      <nav class="page-navigation"><a href="/new">Submit a new link</a></nav>
+      {% endif %}
+
+      <form class="search-form">
+        <input type="text" class="search-form__input" name="q" value="{{ q }}">
+      </form>
+
+      <p class="result-count">
+        {{ total }} result{{ total|pluralize }}
+      </p>
+
+      {% if tags %}
+      <ul class="tags">
+        {% for tag in tags %}
+        <li class="tags__tag">
+          {% if loop.index0 < 25 %}
+          <a href="/search?q={% filter urlencode %}{% if q %}{{ q }} AND {% endif %}tag:{{ tag.1 }}{% endfilter %}">
+            <span class="tags__tag__count">{{ tag.0 }}</span><span class="tags__tag__name">{{ tag.1 }}</span>
+          </a>
+          {% elif loop.index0 == 25 %}
+          <span class="tags__tag__more">{{ tags|length - loop.index0 }} more tags omitted&hellip;</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if results %}
+      <ol class="results">
+        {% set link_tags = True %}
+        {% for result in results %}
+        {% include "_result.partial.html" %}
+        {% endfor %}
+      </ol>
+      {% endif %}
+
+      {% if page > 1 %}
+      <div class="pagination">
+        <h2 class="pagination__link"><a href="/search?{% if q %}q={{ q|urlencode }}&amp;{% endif %}page={{ page - 1 }}">Previous page</a></h2>
+        <p class="pagination__info">Page {{ (page - 1) }} of {{ pages }}.</p>
+      </div>
+      {% endif %}
+
+      {% if page < pages %}
+      <div class="pagination">
+        <h2 class="pagination__link"><a href="/search?{% if q %}q={{ q|urlencode }}&amp;{% endif %}page={{ page + 1 }}">Next page</a></h2>
+        <p class="pagination__info">Page {{ (page + 1) }} of {{ pages }}.</p>
+      </div>
+      {% endif %}
+    </main>
+  </body>
+</html>

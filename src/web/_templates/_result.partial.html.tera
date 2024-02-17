@@ -1,19 +1,19 @@
 <li class="results__result">
   <h2 class="results__result__title">
     {% if result.url %}
-    <a href="{{ result.url|e }}">{{ result.title|e }}</a>
+    <a href="{{ result.url }}">{{ result.title }}</a>
     {% else %}
-    {{ result.title|e }}
+    {{ result.title }}
     {% endif %}
   </h2>
 
-  <p class="results__result__url">{{ result.domain|e }}</p>
+  <p class="results__result__url">{{ result.domain }}</p>
 
   {% if result.parts %}
   <ol class="results__result__parts">
     {% for part in result.parts %}
     <li class="results__result__parts__part">
-      <a class="results__result__parts__part__link" href="{{ part.url|e }}">{{ part.title|e }}</a>
+      <a class="results__result__parts__part__link" href="{{ part.url }}">{{ part.title }}</a>
     </li>
     {% endfor %}
   </ol>
@@ -27,13 +27,9 @@
   <ul class="results__result__tags">
     {% for tag in result.tag %}
     <li class="results__result__tags__tag">
-    {% if link_tags %}
-      <a href="search?q={% if q %}{{ (q + " AND tag:" + tag)|quote_plus }}{% else %}{{ ("tag:" + tag)|quote_plus }}{% endif %}&amp;page={{ page|e }}">
-    {% endif %}
-      <span class="results__result__tags__tag__name">{{ tag|e }}</span>
-    {% if link_tags %}
-      </a>
-    {% endif %}
+      {% if link_tags %}<a href="/search?q={% filter urlencode %}{% if q %}{{ q }} AND {% endif %}tag:{{ tag }}{% endfilter %}">{% endif %}
+        <span class="results__result__tags__tag__name">{{ tag }}</span>
+      {% if link_tags %}</a>{% endif %}
     </li>
     {% endfor %}
   </ul>
