@@ -1,6 +1,10 @@
 use elasticsearch::http::request::JsonBody;
 use elasticsearch::indices::{IndicesCreateParts, IndicesDeleteParts};
-use elasticsearch::{BulkParts, ClearScrollParts, Elasticsearch, Error, ScrollParts, SearchParts};
+use elasticsearch::params::OpType;
+use elasticsearch::{
+    BulkParts, ClearScrollParts, DeleteParts, Elasticsearch, Error, IndexParts, ScrollParts,
+    SearchParts,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -232,6 +236,24 @@ pub async fn list_tags(client: &Elasticsearch) -> Result<Vec<String>, Error> {
     tags.sort();
 
     Ok(tags)
+}
+
+pub async fn put(client: &Elasticsearch, record: &Record) -> Result<(), Error> {
+    client
+        .index(IndexParts::IndexId(INDEX_NAME, &record.id()))
+        .op_type(OpType::Create)
+        .body(serde_json::to_value(record).unwrap())
+        .send()
+        .await?;
+    Ok(())
+}
+
+pub async fn delete(client: &Elasticsearch, record: &Record) -> Result<(), Error> {
+    client
+        .delete(DeleteParts::IndexId(INDEX_NAME, &record.id()))
+        .send()
+        .await?;
+    Ok(())
 }
 
 fn present_hit(hit: &Value) -> (Record, Option<String>) {

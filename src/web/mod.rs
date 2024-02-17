@@ -1,3 +1,4 @@
+use actix_multipart::form::MultipartForm;
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, ResponseError};
 use elasticsearch::http::transport::Transport;
@@ -182,11 +183,106 @@ async fn get_new(state: web::Data<AppState>) -> Result<HttpResponse, Error> {
 }
 
 #[post("/new")]
-async fn post_new(state: web::Data<AppState>) -> Result<HttpResponse, Error> {
-    match state.elasticsearch() {
-        Ok(_client) => Err(error_something_went_wrong()),
-        Err(_err) => Err(error_cannot_connect_to_search_server()),
+async fn post_new(
+    state: web::Data<AppState>,
+    form: MultipartForm<PutRecord>,
+) -> Result<HttpResponse, Error> {
+    let client = state
+        .elasticsearch()
+        .map_err(|_| error_cannot_connect_to_search_server())?;
+
+    let record = form_to_record(form.into_inner()).await?;
+
+    es::delete(&client, &record)
+        .await
+        .map_err(|_| error_cannot_connect_to_search_server())?;
+    es::put(&client, &record)
+        .await
+        .map_err(|_| error_cannot_connect_to_search_server())?;
+
+    let mut context = state.context();
+    context.insert("result", &present_result((record, None)));
+
+    render_html("success.html", &context)
+}
+
+#[derive(MultipartForm)]
+struct PutRecord {
+    collection_title: actix_multipart::form::text::Text<String>,
+    tag: Vec<actix_multipart::form::text::Text<String>>,
+    url: Vec<actix_multipart::form::text::Text<String>>,
+    title: Vec<actix_multipart::form::text::Text<String>>,
+    content: actix_multipart::form::text::Text<String>,
+}
+
+async fn form_to_record(form: PutRecord) -> Result<es::Record, Error> {
+    let collection_title = multipart_str(form.collection_title);
+    let tag: Vec<_> = form.tag.into_iter().filter_map(multipart_str).collect();
+    let url: Vec<_> = form.url.into_iter().filter_map(multipart_str).collect();
+    let mut title: Vec<_> = form.title.into_iter().filter_map(multipart_str).collect();
+
+    if url.is_empty() || title.is_empty() {
+        return Err(error_bad_request());
     }
+
+    let title_sort = if let Some(t) = collection_title {
+        title.insert(0, t.clone());
+        t
+    } else {
+        title[0].clone()
+    };
+
+    let content = if let Some(s) = multipart_str(form.content) {
+        s
+    } else {
+        fetch_combined_url_contents(&url).await
+    };
+
+    let domain = reqwest::Url::parse(&url[0])
+        .unwrap()
+        .host_str()
+        .unwrap()
+        .to_string();
+
+    Ok(es::Record {
+        title,
+        title_sort,
+        url,
+        domain,
+        tag,
+        content,
+    })
+}
+
+fn multipart_str(s: actix_multipart::form::text::Text<String>) -> Option<String> {
+    if s.is_empty() {
+        None
+    } else {
+        Some(s.to_string())
+    }
+}
+
+async fn fetch_combined_url_contents(urls: &[String]) -> String {
+    let mut handles = Vec::with_capacity(urls.len());
+    for url in urls {
+        handles.push(tokio::spawn(fetch_url_content(url.clone())));
+    }
+
+    let mut results = Vec::with_capacity(handles.len());
+    for handle in handles {
+        if let Ok(result) = handle.await.unwrap() {
+            results.push(result);
+        }
+    }
+
+    results.join("\n")
+}
+
+async fn fetch_url_content(url: String) -> reqwest::Result<String> {
+    let html = reqwest::get(url).await?.text().await?;
+    let doc = scraper::Html::parse_document(&html);
+    let text = doc.root_element().text();
+    Ok(text.collect::<Vec<_>>().join(" "))
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -195,8 +291,13 @@ lazy_static! {
     static ref TEMPLATES: Tera = {
         let mut tera = Tera::default();
         let res = tera.add_raw_templates(vec![
+            (
+                "_result.partial.html",
+                include_str!("_templates/_result.partial.html.tera"),
+            ),
             ("new.html", include_str!("_templates/new.html.tera")),
             ("search.html", include_str!("_templates/search.html.tera")),
+            ("success.html", include_str!("_templates/success.html.tera")),
         ]);
         if let Err(error) = res {
             panic!("could not parse templates: {error}");
@@ -299,6 +400,13 @@ fn error_cannot_connect_to_search_server() -> Error {
     Error {
         status_code: StatusCode::SERVICE_UNAVAILABLE,
         message: "The search server is unavailable.  Try again in a minute or two.".to_string(),
+    }
+}
+
+fn error_bad_request() -> Error {
+    Error {
+        status_code: StatusCode::BAD_REQUEST,
+        message: "Bad request.".to_string(),
     }
 }
 

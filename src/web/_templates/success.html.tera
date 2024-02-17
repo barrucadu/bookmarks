@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="refresh" content="2;URL='/search'">
+    <meta name="author" content="Michael Walker">
+    <meta name="robots" content="NONE">
+
+    <title>Added '{{ result.title }}'</title>
+
+    <link rel="stylesheet" href="/resources/style.css" type="text/css">
+  </head>
+
+  <body>
+    <main>
+      <p>Result added successfully.</p>
+      <ol class="results">
+        {% include "_result.partial.html" %}
+      </ol>
+    </main>
+  </body>
+  </html>
