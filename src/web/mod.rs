@@ -167,10 +167,18 @@ fn ranked_aggregate(mut agg: HashMap<String, u64>) -> Vec<(u64, String)> {
 
 #[get("/new")]
 async fn get_new(state: web::Data<AppState>) -> Result<HttpResponse, Error> {
-    match state.elasticsearch() {
-        Ok(_client) => Err(error_something_went_wrong()),
-        Err(_err) => Err(error_cannot_connect_to_search_server()),
-    }
+    let client = state
+        .elasticsearch()
+        .map_err(|_| error_cannot_connect_to_search_server())?;
+
+    let tags = es::list_tags(&client)
+        .await
+        .map_err(|_| error_cannot_connect_to_search_server())?;
+
+    let mut context = state.context();
+    context.insert("tags", &tags);
+
+    render_html("new.html", &context)
 }
 
 #[post("/new")]
@@ -186,10 +194,10 @@ async fn post_new(state: web::Data<AppState>) -> Result<HttpResponse, Error> {
 lazy_static! {
     static ref TEMPLATES: Tera = {
         let mut tera = Tera::default();
-        let res = tera.add_raw_templates(vec![(
-            "search.html",
-            include_str!("_templates/search.html.tera"),
-        )]);
+        let res = tera.add_raw_templates(vec![
+            ("new.html", include_str!("_templates/new.html.tera")),
+            ("search.html", include_str!("_templates/search.html.tera")),
+        ]);
         if let Err(error) = res {
             panic!("could not parse templates: {error}");
         }

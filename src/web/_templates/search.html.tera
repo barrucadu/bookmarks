@@ -13,7 +13,7 @@
   <body>
     <main>
       {% if allow_writes %}
-      <nav class="page-navigation"><a href="/add">Submit a new link</a></nav>
+      <nav class="page-navigation"><a href="/new">Submit a new link</a></nav>
       {% endif %}
 
       <form class="search-form">

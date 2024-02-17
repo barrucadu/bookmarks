@@ -209,6 +209,31 @@ pub async fn search(
     })
 }
 
+pub async fn list_tags(client: &Elasticsearch) -> Result<Vec<String>, Error> {
+    let body = json!({
+        "_source": false,
+        "query": {"match_all": {}},
+        "aggs": {"tags": {"terms": {"field": "tag", "size": 500}}},
+    });
+
+    let response = client
+        .search(SearchParts::Index(&[INDEX_NAME]))
+        .body(body)
+        .send()
+        .await?;
+    let response_body = response.json::<Value>().await?;
+
+    let mut tags: Vec<_> = response_body["aggregations"]["tags"]["buckets"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| b["key"].as_str().unwrap().to_string())
+        .collect();
+    tags.sort();
+
+    Ok(tags)
+}
+
 fn present_hit(hit: &Value) -> (Record, Option<String>) {
     let record = Record::deserialize(&hit["_source"]).unwrap();
     let highlight = hit["highlight"]["content"][0]
