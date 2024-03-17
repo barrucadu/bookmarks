@@ -255,6 +255,7 @@ async fn form_to_record(form: PutRecord) -> Result<es::Record, Error> {
 }
 
 fn multipart_str(s: &actix_multipart::form::text::Text<String>) -> Option<String> {
+    let s = s.trim();
     if s.is_empty() {
         None
     } else {

@@ -8,7 +8,6 @@ use elasticsearch::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::string::ToString;
 
 static INDEX_NAME: &str = "bookmarks";
 
