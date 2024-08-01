@@ -9,7 +9,7 @@ edition = "2021"
 actix-web = "4"
 actix-multipart = "0.7"
 actix-multipart-derive = "0.7"
-clap = { version = "~4.5.11", features = ["derive", "env"] }
+clap = { version = "~4.5.12", features = ["derive", "env"] }
 elasticsearch = "8.5.0-alpha.1"
 lazy_static = "1"
 mime = "0.3"
