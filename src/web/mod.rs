@@ -1,6 +1,9 @@
-use actix_multipart::form::MultipartForm;
-use actix_web::http::StatusCode;
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, ResponseError};
+use axum::body::Body;
+use axum::extract::{Multipart, Query, State};
+use axum::http::header;
+use axum::http::StatusCode;
+use axum::response::{Html, IntoResponse, Redirect, Response};
+use axum::{routing, Router};
 use elasticsearch::http::transport::Transport;
 use elasticsearch::Elasticsearch;
 use lazy_static::lazy_static;
@@ -8,44 +11,66 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::{fmt, io};
 use tera::Tera;
 
 use crate::es;
 
-pub async fn serve(es_host: String, address: SocketAddr, allow_writes: bool) -> io::Result<()> {
-    let app_state = web::Data::new(AppState {
+pub async fn serve(
+    es_host: String,
+    address: SocketAddr,
+    allow_writes: bool,
+) -> std::io::Result<()> {
+    let app_state = AppState {
         es_host,
         allow_writes,
-    });
+    };
 
-    HttpServer::new(move || {
-        let ro_app = App::new()
-            .app_data(app_state.clone())
-            .default_service(web::to(fallback_404))
-            .service(get_resource_stylesheet)
-            .service(get_resource_searchsvg)
-            .service(get_resource_firamono)
-            .service(get_resource_gentiumbookbasic)
-            .service(get_index)
-            .service(get_search);
-        if allow_writes {
-            ro_app.service(get_new).service(post_new)
-        } else {
-            ro_app
-        }
-    })
-    .bind(address)?
-    .run()
-    .await
+    let app = routes(allow_writes)
+        .fallback(fallback_404)
+        .with_state(app_state);
+    let listener = tokio::net::TcpListener::bind(address).await?;
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }
 
-async fn fallback_404() -> HttpResponse {
-    error_file_not_found().error_response()
+fn routes(allow_writes: bool) -> Router<AppState> {
+    let ro_app = Router::new()
+        .route("/", routing::get(get_index))
+        .route("/search", routing::get(get_search))
+        .route(
+            "/resources/style.css",
+            routing::get(get_resource_stylesheet),
+        )
+        .route(
+            "/resources/search.svg",
+            routing::get(get_resource_searchsvg),
+        )
+        .route(
+            "/resources/fira-mono.woff2",
+            routing::get(get_resource_firamono),
+        )
+        .route(
+            "/resources/gentium-book-basic.woff2",
+            routing::get(get_resource_gentiumbookbasic),
+        );
+
+    if allow_writes {
+        ro_app
+            .route("/new", routing::get(get_new))
+            .route("/new", routing::post(post_new))
+    } else {
+        ro_app
+    }
+}
+
+async fn fallback_404() -> Error {
+    error_file_not_found()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#[derive(Clone)]
 struct AppState {
     es_host: String,
     allow_writes: bool,
@@ -65,18 +90,16 @@ impl AppState {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[get("/")]
-async fn get_index() -> impl Responder {
-    web::Redirect::to("/search").permanent()
+async fn get_index() -> Redirect {
+    Redirect::permanent("/search")
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[get("/search")]
 async fn get_search(
-    query: web::Query<FormSearchQuery>,
-    state: web::Data<AppState>,
-) -> Result<HttpResponse, Error> {
+    Query(query): Query<FormSearchQuery>,
+    State(state): State<AppState>,
+) -> Result<Html<String>, Error> {
     let q = if let Some(q) = &query.q {
         let trimmed = q.trim();
         if trimmed.is_empty() {
@@ -166,8 +189,7 @@ fn ranked_aggregate(mut agg: HashMap<String, u64>) -> Vec<(u64, String)> {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#[get("/new")]
-async fn get_new(state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+async fn get_new(State(state): State<AppState>) -> Result<Html<String>, Error> {
     let client = state
         .elasticsearch()
         .map_err(|_| error_cannot_connect_to_search_server())?;
@@ -182,16 +204,12 @@ async fn get_new(state: web::Data<AppState>) -> Result<HttpResponse, Error> {
     render_html("new.html", &context)
 }
 
-#[post("/new")]
-async fn post_new(
-    state: web::Data<AppState>,
-    form: MultipartForm<PutRecord>,
-) -> Result<HttpResponse, Error> {
+async fn post_new(State(state): State<AppState>, form: Multipart) -> Result<Html<String>, Error> {
     let client = state
         .elasticsearch()
         .map_err(|_| error_cannot_connect_to_search_server())?;
 
-    let record = form_to_record(form.into_inner()).await?;
+    let record = form_to_record(form).await?;
 
     es::delete(&client, &record)
         .await
@@ -206,20 +224,33 @@ async fn post_new(
     render_html("success.html", &context)
 }
 
-#[derive(MultipartForm)]
-struct PutRecord {
-    collection_title: actix_multipart::form::text::Text<String>,
-    tag: Vec<actix_multipart::form::text::Text<String>>,
-    url: Vec<actix_multipart::form::text::Text<String>>,
-    title: Vec<actix_multipart::form::text::Text<String>>,
-    content: actix_multipart::form::text::Text<String>,
-}
+async fn form_to_record(mut form: Multipart) -> Result<es::Record, Error> {
+    let mut collection_title = None;
+    let mut tag = Vec::with_capacity(3);
+    let mut url = Vec::with_capacity(1);
+    let mut title = Vec::with_capacity(1);
+    let mut content = None;
 
-async fn form_to_record(form: PutRecord) -> Result<es::Record, Error> {
-    let collection_title = multipart_str(&form.collection_title);
-    let tag: Vec<_> = form.tag.iter().filter_map(multipart_str).collect();
-    let url: Vec<_> = form.url.iter().filter_map(multipart_str).collect();
-    let mut title: Vec<_> = form.title.iter().filter_map(multipart_str).collect();
+    while let Some(field) = form.next_field().await.map_err(|_| error_bad_request())? {
+        let name = field.name().ok_or(error_bad_request())?.to_string();
+        let value = field
+            .text()
+            .await
+            .map_err(|_| error_bad_request())?
+            .trim()
+            .to_string();
+        if value.is_empty() {
+            continue;
+        }
+        match name.as_str() {
+            "collection_title" => collection_title = Some(value),
+            "tag" => tag.push(value),
+            "url" => url.push(value),
+            "title" => title.push(value),
+            "content" => content = Some(value),
+            _ => return Err(error_bad_request()),
+        }
+    }
 
     if url.is_empty() || title.is_empty() {
         return Err(error_bad_request());
@@ -232,7 +263,7 @@ async fn form_to_record(form: PutRecord) -> Result<es::Record, Error> {
         title[0].clone()
     };
 
-    let content = if let Some(s) = multipart_str(&form.content) {
+    let content = if let Some(s) = content {
         s
     } else {
         fetch_combined_url_contents(&url).await
@@ -252,15 +283,6 @@ async fn form_to_record(form: PutRecord) -> Result<es::Record, Error> {
         tag,
         content,
     })
-}
-
-fn multipart_str(s: &actix_multipart::form::text::Text<String>) -> Option<String> {
-    let s = s.trim();
-    if s.is_empty() {
-        None
-    } else {
-        Some(s.to_string())
-    }
 }
 
 async fn fetch_combined_url_contents(urls: &[String]) -> String {
@@ -307,11 +329,9 @@ lazy_static! {
     };
 }
 
-fn render_html(template: &str, context: &tera::Context) -> Result<HttpResponse, Error> {
+fn render_html(template: &str, context: &tera::Context) -> Result<Html<String>, Error> {
     match TEMPLATES.render(template, context) {
-        Ok(rendered) => Ok(HttpResponse::Ok()
-            .content_type(mime::TEXT_HTML_UTF_8)
-            .body(rendered)),
+        Ok(rendered) => Ok(Html(rendered)),
         Err(_) => Err(error_something_went_wrong()),
     }
 }
@@ -323,32 +343,32 @@ const RESOURCE_SEARCH_SVG: &[u8] = include_bytes!("_resources/search.svg");
 const RESOURCE_FONT_FIRAMONO: &[u8] = include_bytes!("_resources/fira-mono.woff2");
 const RESOURCE_FONT_GENTIUMBOOKBASIC: &[u8] = include_bytes!("_resources/gentium-book-basic.woff2");
 
-#[get("/resources/style.css")]
-async fn get_resource_stylesheet() -> HttpResponse {
-    HttpResponse::Ok()
-        .content_type(mime::TEXT_CSS_UTF_8)
-        .body(RESOURCE_STYLE_CSS)
+async fn get_resource_stylesheet() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, mime::TEXT_CSS_UTF_8.essence_str())],
+        RESOURCE_STYLE_CSS,
+    )
 }
 
-#[get("/resources/search.svg")]
-async fn get_resource_searchsvg() -> HttpResponse {
-    HttpResponse::Ok()
-        .content_type(mime::IMAGE_SVG)
-        .body(RESOURCE_SEARCH_SVG)
+async fn get_resource_searchsvg() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, mime::IMAGE_SVG.essence_str())],
+        RESOURCE_SEARCH_SVG,
+    )
 }
 
-#[get("/resources/fira-mono.woff2")]
-async fn get_resource_firamono() -> HttpResponse {
-    HttpResponse::Ok()
-        .content_type(mime::FONT_WOFF2)
-        .body(RESOURCE_FONT_FIRAMONO)
+async fn get_resource_firamono() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, mime::FONT_WOFF2.essence_str())],
+        RESOURCE_FONT_FIRAMONO,
+    )
 }
 
-#[get("/resources/gentium-book-basic.woff2")]
-async fn get_resource_gentiumbookbasic() -> HttpResponse {
-    HttpResponse::Ok()
-        .content_type(mime::FONT_WOFF2)
-        .body(RESOURCE_FONT_GENTIUMBOOKBASIC)
+async fn get_resource_gentiumbookbasic() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, mime::FONT_WOFF2.essence_str())],
+        RESOURCE_FONT_GENTIUMBOOKBASIC,
+    )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -361,39 +381,23 @@ struct Error {
     message: String,
 }
 
-impl Error {
-    fn html_error_response(&self) -> Result<HttpResponse, tera::Error> {
+impl IntoResponse for Error {
+    fn into_response(self) -> Response<Body> {
         let mut context = tera::Context::new();
         context.insert("status_code", &u16::from(self.status_code));
         context.insert("message", &self.message);
 
-        let rendered = Tera::one_off(TEMPLATE_ERROR_HTML, &context, true)?;
-        Ok(HttpResponse::build(self.status_code)
-            .content_type(mime::TEXT_HTML_UTF_8)
-            .body(rendered))
-    }
-
-    fn fallback_error_response(&self) -> HttpResponse {
-        HttpResponse::build(self.status_code)
-            .content_type(mime::TEXT_PLAIN_UTF_8)
-            .body(self.message.clone())
+        if let Ok(rendered) = Tera::one_off(TEMPLATE_ERROR_HTML, &context, true) {
+            (self.status_code, Html(rendered)).into_response()
+        } else {
+            (self.status_code, self.message.clone()).into_response()
+        }
     }
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {}", u16::from(self.status_code), self.message)
-    }
-}
-
-impl ResponseError for Error {
-    fn status_code(&self) -> StatusCode {
-        self.status_code
-    }
-
-    fn error_response(&self) -> HttpResponse {
-        self.html_error_response()
-            .unwrap_or(self.fallback_error_response())
     }
 }
 
