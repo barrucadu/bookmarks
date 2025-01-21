@@ -145,6 +145,7 @@ pub async fn import(client: &Elasticsearch, records: Vec<Record>) -> Result<Opti
         .send()
         .await?;
     let response_body = response.json::<Value>().await?;
+    dbg!(&response_body);
     if response_body["errors"].as_bool().unwrap() {
         Ok(None)
     } else {
