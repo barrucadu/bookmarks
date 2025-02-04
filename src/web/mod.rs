@@ -6,7 +6,6 @@ use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::{routing, Router};
 use elasticsearch::http::transport::Transport;
 use elasticsearch::Elasticsearch;
-use lazy_static::lazy_static;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -310,24 +309,22 @@ async fn fetch_url_content(url: String) -> reqwest::Result<String> {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-lazy_static! {
-    static ref TEMPLATES: Tera = {
-        let mut tera = Tera::default();
-        let res = tera.add_raw_templates(vec![
-            (
-                "_result.partial.html",
-                include_str!("_templates/_result.partial.html.tera"),
-            ),
-            ("new.html", include_str!("_templates/new.html.tera")),
-            ("search.html", include_str!("_templates/search.html.tera")),
-            ("success.html", include_str!("_templates/success.html.tera")),
-        ]);
-        if let Err(error) = res {
-            panic!("could not parse templates: {error}");
-        }
-        tera
-    };
-}
+static TEMPLATES: std::sync::LazyLock<Tera> = std::sync::LazyLock::new(|| {
+    let mut tera = Tera::default();
+    let res = tera.add_raw_templates(vec![
+        (
+            "_result.partial.html",
+            include_str!("_templates/_result.partial.html.tera"),
+        ),
+        ("new.html", include_str!("_templates/new.html.tera")),
+        ("search.html", include_str!("_templates/search.html.tera")),
+        ("success.html", include_str!("_templates/success.html.tera")),
+    ]);
+    if let Err(error) = res {
+        panic!("could not parse templates: {error}");
+    }
+    tera
+});
 
 fn render_html(template: &str, context: &tera::Context) -> Result<Html<String>, Error> {
     match TEMPLATES.render(template, context) {
