@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 axum = { version = "0.8.2", features = ["multipart"] }
-clap = { version = "~4.5.31", features = ["derive", "env"] }
+clap = { version = "~4.5.32", features = ["derive", "env"] }
 elasticsearch = "8.17.0-alpha.1"
 mime = "0.3"
 reqwest = "0.12"
