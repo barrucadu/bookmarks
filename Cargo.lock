@@ -552,15 +552,16 @@ checksum = "b2972feb8dffe7bc8c5463b1dacda1b0dfbed3710e50f977d965429692d74cd8"
 
 [[package]]
 name = "elasticsearch"
-version = "8.17.0-alpha.1"
+version = "9.0.0-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52be486463ef0b89e45191803db146387d5f594c26a0c8790807bb3e988ec5f6"
+checksum = "ac56c5020df7eb14e32b0ffd300b510a99684ccd539a9fb8847abf2739cbac7b"
 dependencies = [
  "base64 0.22.0",
  "bytes",
  "dyn-clone",
  "flate2",
  "lazy_static",
+ "parking_lot",
  "percent-encoding",
  "reqwest",
  "rustc_version",
