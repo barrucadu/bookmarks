@@ -14,7 +14,7 @@ reqwest = "0.13"
 scraper = "0.27"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
-tera = "1"
+tera = "2"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
