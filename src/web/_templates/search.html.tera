@@ -29,8 +29,8 @@
         {% for tag in tags %}
         <li class="tags__tag">
           {% if loop.index0 < 25 %}
-          <a href="/search?q={% filter urlencode %}{% if q %}{{ q }} AND {% endif %}tag:{{ tag.1 }}{% endfilter %}">
-            <span class="tags__tag__count">{{ tag.0 }}</span><span class="tags__tag__name">{{ tag.1 }}</span>
+          <a href="/search?q={% filter urlencode %}{% if q %}{{ q }} AND {% endif %}tag:{{ tag.label }}{% endfilter %}">
+            <span class="tags__tag__count">{{ tag.score }}</span><span class="tags__tag__name">{{ tag.label }}</span>
           </a>
           {% elif loop.index0 == 25 %}
           <span class="tags__tag__more">{{ tags|length - loop.index0 }} more tags omitted&hellip;</span>
