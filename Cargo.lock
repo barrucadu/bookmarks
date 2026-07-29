@@ -201,6 +201,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tera",
+ "tera-contrib",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -2277,6 +2278,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "511f07fd91a70e92efbe4793d111aaa9035f8474dd157aaa1e31e7c27f5051da"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "tera-contrib"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3792553c620406661d510095e5885bfb77b2296db30369bcc8308329a6fe78c"
+dependencies = [
+ "percent-encoding",
+ "tera",
 ]
 
 [[package]]

@@ -6,7 +6,7 @@ use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::{routing, Router};
 use elasticsearch::http::transport::Transport;
 use elasticsearch::Elasticsearch;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -179,8 +179,17 @@ fn present_result((record, fragment): (es::Record, Option<String>)) -> Value {
     })
 }
 
-fn ranked_aggregate(mut agg: HashMap<String, u64>) -> Vec<(u64, String)> {
-    let mut vec: Vec<_> = agg.drain().map(|(k, v)| (v, k)).collect();
+#[derive(Eq, Ord, PartialEq, PartialOrd, Serialize)]
+struct RankedPair {
+    pub score: u64,
+    pub label: String,
+}
+
+fn ranked_aggregate(mut agg: HashMap<String, u64>) -> Vec<RankedPair> {
+    let mut vec: Vec<_> = agg
+        .drain()
+        .map(|(k, v)| RankedPair { score: v, label: k })
+        .collect();
     vec.sort();
     vec.reverse();
     vec
@@ -311,6 +320,7 @@ async fn fetch_url_content(url: String) -> reqwest::Result<String> {
 
 static TEMPLATES: std::sync::LazyLock<Tera> = std::sync::LazyLock::new(|| {
     let mut tera = Tera::default();
+    tera.register_filter("urlencode", tera_contrib::urlencode::urlencode);
     let res = tera.add_raw_templates(vec![
         (
             "_result.partial.html",
